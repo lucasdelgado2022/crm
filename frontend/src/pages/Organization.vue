@@ -12,12 +12,6 @@
         v-if="organization._actions?.length"
         :actions="organization._actions"
       />
-      <EnrichFromWebsite
-        doctype="CRM Organization"
-        :docname="props.organizationId"
-        :website="organization.doc?.website"
-        @done="onEnriched"
-      />
     </template>
   </LayoutHeader>
   <div v-if="organization.doc" ref="parentRef" class="flex h-full">
@@ -161,6 +155,14 @@
           :columns="columns"
           :options="{ selectable: false, showTooltip: false }"
         />
+        <ListView
+          v-if="tab.label === 'Software' && rows.length"
+          class="mt-4 px-5"
+          :rows="rows"
+          :columns="columns"
+          row-key="name"
+          :options="{ selectable: false, showTooltip: false }"
+        />
         <EmptyState
           v-if="!rows.length"
           :icon="tab.icon"
@@ -197,7 +199,6 @@ import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
 import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
 import CustomActions from '@/components/CustomActions.vue'
-import EnrichFromWebsite from '@/components/EnrichFromWebsite.vue'
 import { useDocument } from '@/data/document'
 import { getSettings } from '@/stores/settings'
 import { globalStore } from '@/stores/global'
@@ -217,6 +218,8 @@ import {
   FileUploader,
   Dropdown,
   Tabs,
+  ListView,
+  FeatherIcon,
   createListResource,
   usePageMeta,
   createResource,
@@ -225,7 +228,7 @@ import {
 } from 'frappe-ui'
 import { useDoctypeModal } from '@/composables/doctypeModal'
 import { useTelemetry } from 'frappe-ui/frappe'
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, h, ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -255,11 +258,6 @@ const {
 } = useDocument('CRM Organization', props.organizationId)
 
 const canDelete = computed(() => permissions.data?.permissions?.delete || false)
-
-function onEnriched() {
-  organization.reload?.()
-  sections.reload()
-}
 
 onMounted(async () => {
   if (organization.doc) await triggerOnRender()
@@ -380,6 +378,10 @@ function getParsedSections(_sections) {
   })
 }
 
+const SoftwareIcon = {
+  render: () => h(FeatherIcon, { name: 'monitor', class: 'h-5 w-5' }),
+}
+
 const tabIndex = ref(0)
 const tabs = [
   {
@@ -391,6 +393,13 @@ const tabs = [
     label: 'Contacts',
     icon: ContactsIcon,
     count: computed(() => contacts.data?.length),
+  },
+  {
+    label: 'Software',
+    icon: SoftwareIcon,
+    count: computed(
+      () => (software.data?.length || 0) + (procesos.data?.length || 0),
+    ),
   },
 ]
 
@@ -438,21 +447,91 @@ const contacts = createListResource({
   auto: true,
 })
 
+const software = createListResource({
+  type: 'list',
+  doctype: 'Software',
+  cache: ['software', props.organizationId],
+  fields: ['name', 'software_name', 'contact', 'modified'],
+  filters: {
+    organization: props.organizationId,
+  },
+  orderBy: 'modified desc',
+  pageLength: 99,
+  auto: true,
+})
+
+const procesos = createListResource({
+  type: 'list',
+  doctype: 'Procesos - Tecnologias',
+  cache: ['procesos', props.organizationId],
+  fields: ['name', 'nombre', 'modified'],
+  filters: {
+    organization: props.organizationId,
+  },
+  orderBy: 'modified desc',
+  pageLength: 99,
+  auto: true,
+})
+
 const rows = computed(() => {
-  let list = !tabIndex.value ? deals : contacts
-
-  if (!list.data) return []
-
-  return list.data.map((row) => {
-    return !tabIndex.value ? getDealRowObject(row) : getContactRowObject(row)
-  })
+  if (tabIndex.value === 0) return deals.data?.map(getDealRowObject) || []
+  if (tabIndex.value === 1) return contacts.data?.map(getContactRowObject) || []
+  return [
+    ...(software.data?.map(getSoftwareRowObject) || []),
+    ...(procesos.data?.map(getProcesoRowObject) || []),
+  ]
 })
 
 const { getFormattedCurrency } = getMeta('CRM Deal')
 
 const columns = computed(() => {
-  return tabIndex.value === 0 ? dealColumns : contactColumns
+  if (tabIndex.value === 0) return dealColumns
+  if (tabIndex.value === 1) return contactColumns
+  return softwareColumns
 })
+
+function getSoftwareRowObject(sw) {
+  return {
+    name: 'sw-' + sw.name,
+    software_name: sw.software_name,
+    tipo: __('Software'),
+    contact: sw.contact || '',
+    modified: timestampCell(sw.modified),
+  }
+}
+
+function getProcesoRowObject(p) {
+  return {
+    name: 'pt-' + p.name,
+    software_name: p.nombre,
+    tipo: __('Proceso / Tecnología'),
+    contact: '',
+    modified: timestampCell(p.modified),
+  }
+}
+
+const softwareColumns = [
+  {
+    label: __('Nombre'),
+    key: 'software_name',
+    width: '16rem',
+  },
+  {
+    label: __('Tipo'),
+    key: 'tipo',
+    width: '11rem',
+  },
+  {
+    label: __('Contacto'),
+    key: 'contact',
+    width: '12rem',
+  },
+  {
+    label: __('Last Modified'),
+    key: 'modified',
+    width: '10rem',
+  },
+]
 
 function getDealRowObject(deal) {
   return {
