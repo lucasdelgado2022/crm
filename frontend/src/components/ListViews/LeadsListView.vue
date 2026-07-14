@@ -66,6 +66,9 @@
           <div v-else-if="column.key === 'status'">
             <IndicatorIcon :class="item.color" />
           </div>
+          <div v-else-if="column.key === 'territory'">
+            <IndicatorIcon v-if="item?.color" :class="item.color" />
+          </div>
           <div v-else-if="column.key === 'lead_name'">
             <Avatar
               v-if="item.label"

@@ -141,6 +141,32 @@
         </button>
       </template>
       <template #tab-panel="{ tab }">
+        <div class="flex flex-1 flex-col overflow-hidden">
+        <div
+          v-if="['Deals', 'Contacts'].includes(tab.label)"
+          class="flex justify-end gap-2 px-5 pt-3"
+        >
+          <Link
+            value=""
+            :doctype="tab.label === 'Deals' ? 'CRM Deal' : 'Contact'"
+            @change="(name) => addExisting(tab.label, name)"
+          >
+            <template #target="{ togglePopover }">
+              <Button variant="outline" @click="togglePopover()">
+                <template #prefix>
+                  <FeatherIcon name="link" class="h-4" />
+                </template>
+                {{ __('Add Existing') }}
+              </Button>
+            </template>
+          </Link>
+          <Button variant="solid" @click="createNew(tab.label)">
+            <template #prefix>
+              <FeatherIcon name="plus" class="h-4" />
+            </template>
+            {{ __('Create') }}
+          </Button>
+        </div>
         <DealsListView
           v-if="tab.label === 'Deals' && rows.length"
           class="mt-4"
@@ -168,6 +194,7 @@
           :icon="tab.icon"
           :name="__(tab.label)"
         />
+        </div>
       </template>
     </Tabs>
   </div>
@@ -182,6 +209,20 @@
     :doctype="'CRM Organization'"
     :docname="props.organizationId"
     name="Organizations"
+  />
+  <DealModal
+    v-if="showDealModal"
+    v-model="showDealModal"
+    :defaults="{ organization: props.organizationId }"
+  />
+  <ContactModal
+    v-if="showContactModal"
+    v-model="showContactModal"
+    :contact="{ company_name: props.organizationId }"
+    :options="{
+      redirect: false,
+      afterInsert: () => contacts.reload(),
+    }"
   />
 </template>
 
@@ -198,6 +239,9 @@ import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
 import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
+import DealModal from '@/components/Modals/DealModal.vue'
+import ContactModal from '@/components/Modals/ContactModal.vue'
+import Link from '@/components/Controls/Link.vue'
 import CustomActions from '@/components/CustomActions.vue'
 import { useDocument } from '@/data/document'
 import { getSettings } from '@/stores/settings'
@@ -641,6 +685,43 @@ const contactColumns = [
 ]
 
 const { showModal } = useDoctypeModal()
+
+const showDealModal = ref(false)
+const showContactModal = ref(false)
+
+function createNew(tabLabel) {
+  if (tabLabel === 'Deals') {
+    showDealModal.value = true
+  } else {
+    showContactModal.value = true
+  }
+}
+
+async function addExisting(tabLabel, name) {
+  if (!name) return
+  try {
+    if (tabLabel === 'Deals') {
+      await call('frappe.client.set_value', {
+        doctype: 'CRM Deal',
+        name: name,
+        fieldname: 'organization',
+        value: props.organizationId,
+      })
+      deals.reload()
+    } else {
+      await call('frappe.client.set_value', {
+        doctype: 'Contact',
+        name: name,
+        fieldname: 'company_name',
+        value: props.organizationId,
+      })
+      contacts.reload()
+    }
+    toast.success(__('Linked to organization'))
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error linking document'))
+  }
+}
 
 function showAddressModal(_address) {
   showModal({

@@ -10,6 +10,7 @@
   "territory_name",
   "column_break_mckp",
   "territory_manager",
+  "color",
   "section_break_qhaf",
   "old_parent",
   "parent_crm_territory",
@@ -36,6 +37,14 @@
    "fieldtype": "Link",
    "label": "Territory Manager",
    "options": "User"
+  },
+  {
+   "default": "gray",
+   "fieldname": "color",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Color",
+   "options": "black\ngray\nblue\ngreen\nred\npink\norange\namber\nyellow\ncyan\nteal\nviolet\npurple"
   },
   {
    "fieldname": "lft",
