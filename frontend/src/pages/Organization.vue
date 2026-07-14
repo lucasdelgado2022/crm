@@ -167,6 +167,33 @@
             {{ __('Create') }}
           </Button>
         </div>
+        <div
+          v-else-if="tab.label === 'Software'"
+          class="flex justify-end gap-2 px-5 pt-3"
+        >
+          <Dropdown :options="softwareLinkOptions">
+            <Button variant="outline">
+              <template #prefix>
+                <FeatherIcon name="link" class="h-4" />
+              </template>
+              {{ __('Add Existing') }}
+              <template #suffix>
+                <FeatherIcon name="chevron-down" class="h-4" />
+              </template>
+            </Button>
+          </Dropdown>
+          <Dropdown :options="softwareCreateOptions">
+            <Button variant="solid">
+              <template #prefix>
+                <FeatherIcon name="plus" class="h-4" />
+              </template>
+              {{ __('Create') }}
+              <template #suffix>
+                <FeatherIcon name="chevron-down" class="h-4" />
+              </template>
+            </Button>
+          </Dropdown>
+        </div>
         <DealsListView
           v-if="tab.label === 'Deals' && rows.length"
           class="mt-4"
@@ -224,6 +251,19 @@
       afterInsert: () => contacts.reload(),
     }"
   />
+  <Dialog
+    v-model="showLinkSoftwareDialog"
+    :options="{ title: __('Add Existing') + ': ' + __(linkSoftwareLabel) }"
+  >
+    <template #body-content>
+      <Link
+        class="form-control"
+        value=""
+        :doctype="linkSoftwareDoctype"
+        @change="(name) => linkSoftware(name)"
+      />
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
@@ -261,6 +301,7 @@ import {
   Avatar,
   FileUploader,
   Dropdown,
+  Dialog,
   Tabs,
   ListView,
   FeatherIcon,
@@ -694,6 +735,73 @@ function createNew(tabLabel) {
     showDealModal.value = true
   } else {
     showContactModal.value = true
+  }
+}
+
+const showLinkSoftwareDialog = ref(false)
+const linkSoftwareDoctype = ref('Software')
+
+const linkSoftwareLabel = computed(() =>
+  linkSoftwareDoctype.value === 'Software'
+    ? 'Software'
+    : 'Proceso / Tecnología',
+)
+
+const softwareCreateOptions = [
+  {
+    label: __('Software'),
+    onClick: () =>
+      showModal({
+        doctype: 'Software',
+        defaults: { organization: props.organizationId },
+        callbacks: { afterInsert: () => software.reload() },
+      }),
+  },
+  {
+    label: __('Proceso / Tecnología'),
+    onClick: () =>
+      showModal({
+        doctype: 'Procesos - Tecnologias',
+        defaults: { organization: props.organizationId },
+        callbacks: { afterInsert: () => procesos.reload() },
+      }),
+  },
+]
+
+const softwareLinkOptions = [
+  {
+    label: __('Software'),
+    onClick: () => openLinkSoftwareDialog('Software'),
+  },
+  {
+    label: __('Proceso / Tecnología'),
+    onClick: () => openLinkSoftwareDialog('Procesos - Tecnologias'),
+  },
+]
+
+function openLinkSoftwareDialog(doctype) {
+  linkSoftwareDoctype.value = doctype
+  showLinkSoftwareDialog.value = true
+}
+
+async function linkSoftware(name) {
+  if (!name) return
+  showLinkSoftwareDialog.value = false
+  try {
+    await call('frappe.client.set_value', {
+      doctype: linkSoftwareDoctype.value,
+      name: name,
+      fieldname: 'organization',
+      value: props.organizationId,
+    })
+    if (linkSoftwareDoctype.value === 'Software') {
+      software.reload()
+    } else {
+      procesos.reload()
+    }
+    toast.success(__('Linked to organization'))
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error linking document'))
   }
 }
 

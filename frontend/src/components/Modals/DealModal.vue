@@ -155,24 +155,28 @@ async function enrichFromWebsite() {
   }
 }
 
-watch(
-  [chooseExistingOrganization, chooseExistingContact],
-  ([organization, contact]) => {
-    tabs.data.forEach((tab) => {
-      tab.sections.forEach((section) => {
-        if (section.name === 'organization_section') {
-          section.hidden = !organization
-        } else if (section.name === 'organization_details_section') {
-          section.hidden = organization
-        } else if (section.name === 'contact_section') {
-          section.hidden = !contact
-        } else if (section.name === 'contact_details_section') {
-          section.hidden = contact
-        }
-      })
-    })
-  },
+watch([chooseExistingOrganization, chooseExistingContact], () =>
+  applySectionVisibility(tabs.data),
 )
+
+function applySectionVisibility(_tabs) {
+  if (!_tabs) return
+  let organization = chooseExistingOrganization.value
+  let contact = chooseExistingContact.value
+  _tabs.forEach((tab) => {
+    tab.sections.forEach((section) => {
+      if (section.name === 'organization_section') {
+        section.hidden = !organization
+      } else if (section.name === 'organization_details_section') {
+        section.hidden = organization
+      } else if (section.name === 'contact_section') {
+        section.hidden = !contact
+      } else if (section.name === 'contact_details_section') {
+        section.hidden = contact
+      }
+    })
+  })
+}
 
 const tabs = createResource({
   url: 'crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_fields_layout',
@@ -181,6 +185,7 @@ const tabs = createResource({
   auto: true,
   transform: (_tabs) => {
     hasOrganizationSections.value = false
+    applySectionVisibility(_tabs)
     return _tabs.forEach((tab) => {
       tab.sections.forEach((section) => {
         section.columns.forEach((column) => {
@@ -286,6 +291,13 @@ function openQuickEntryModal() {
 onMounted(() => {
   deal.doc.no_of_employees = '1-10'
   Object.assign(deal.doc, props.defaults)
+
+  if (deal.doc.organization) {
+    chooseExistingOrganization.value = true
+  }
+  if (deal.doc.contact) {
+    chooseExistingContact.value = true
+  }
 
   if (!deal.doc.deal_owner) {
     deal.doc.deal_owner = getUser().name

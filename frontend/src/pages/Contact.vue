@@ -144,6 +144,29 @@
         </button>
       </template>
       <template #tab-panel="{ tab }">
+        <div class="flex flex-1 flex-col overflow-hidden">
+        <div class="flex justify-end gap-2 px-5 pt-3">
+          <Link
+            value=""
+            :doctype="tab.label === 'Deals' ? 'CRM Deal' : 'Software'"
+            @change="(name) => addExisting(tab.label, name)"
+          >
+            <template #target="{ togglePopover }">
+              <Button variant="outline" @click="togglePopover()">
+                <template #prefix>
+                  <FeatherIcon name="link" class="h-4" />
+                </template>
+                {{ __('Add Existing') }}
+              </Button>
+            </template>
+          </Link>
+          <Button variant="solid" @click="createNewTabDoc(tab.label)">
+            <template #prefix>
+              <FeatherIcon name="plus" class="h-4" />
+            </template>
+            {{ __('Create') }}
+          </Button>
+        </div>
         <DealsListView
           v-if="tab.label === 'Deals' && rows.length"
           class="mt-4"
@@ -151,7 +174,20 @@
           :columns="columns"
           :options="{ selectable: false, showTooltip: false }"
         />
-        <EmptyState v-if="!rows.length" :icon="tab.icon" name="Deals" />
+        <ListView
+          v-if="tab.label === 'Software' && rows.length"
+          class="mt-4 px-5"
+          :rows="rows"
+          :columns="columns"
+          row-key="name"
+          :options="{ selectable: false, showTooltip: false }"
+        />
+        <EmptyState
+          v-if="!rows.length"
+          :icon="tab.icon"
+          :name="__(tab.label)"
+        />
+        </div>
       </template>
     </Tabs>
   </div>
@@ -167,6 +203,14 @@
     :docname="contact.doc.name"
     name="Contacts"
   />
+  <DealModal
+    v-if="showDealModal"
+    v-model="showDealModal"
+    :defaults="{
+      contact: props.contactId,
+      organization: contact.doc?.company_name,
+    }"
+  />
 </template>
 
 <script setup>
@@ -179,6 +223,8 @@ import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'
+import DealModal from '@/components/Modals/DealModal.vue'
+import Link from '@/components/Controls/Link.vue'
 import CustomActions from '@/components/CustomActions.vue'
 import { validateIsImageFile, setupCustomizations } from '@/utils'
 import { timestampCell } from '@/composables/useTimelinePreferences'
@@ -196,15 +242,18 @@ import {
   Avatar,
   FileUploader,
   Tabs,
+  ListView,
+  FeatherIcon,
   call,
   createResource,
+  createListResource,
   usePageMeta,
   Dropdown,
   toast,
 } from 'frappe-ui'
 import { useDoctypeModal } from '@/composables/doctypeModal'
 import { useTelemetry } from 'frappe-ui/frappe'
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import EmptyState from '@/components/ListViews/EmptyState.vue'
 
@@ -292,11 +341,20 @@ function changeContactImage(file) {
 }
 
 const tabIndex = ref(0)
+const SoftwareIcon = {
+  render: () => h(FeatherIcon, { name: 'monitor', class: 'h-5 w-5' }),
+}
+
 const tabs = [
   {
     label: 'Deals',
     icon: DealsIcon,
     count: computed(() => deals.data?.length),
+  },
+  {
+    label: 'Software',
+    icon: SoftwareIcon,
+    count: computed(() => software.data?.length),
   },
 ]
 
@@ -307,7 +365,23 @@ const deals = createResource({
   auto: true,
 })
 
+const software = createListResource({
+  type: 'list',
+  doctype: 'Software',
+  cache: ['software', props.contactId],
+  fields: ['name', 'software_name', 'organization', 'modified'],
+  filters: {
+    contact: props.contactId,
+  },
+  orderBy: 'modified desc',
+  pageLength: 99,
+  auto: true,
+})
+
 const rows = computed(() => {
+  if (tabIndex.value === 1) {
+    return software.data?.map(getSoftwareRowObject) || []
+  }
   if (!deals.data || deals.data == []) return []
 
   return deals.data.map((row) => getDealRowObject(row))
@@ -486,7 +560,36 @@ async function deleteOption(doctype, name) {
 
 const { getFormattedCurrency } = getMeta('CRM Deal')
 
-const columns = computed(() => dealColumns)
+const columns = computed(() =>
+  tabIndex.value === 1 ? softwareColumns : dealColumns,
+)
+
+function getSoftwareRowObject(sw) {
+  return {
+    name: sw.name,
+    software_name: sw.software_name,
+    organization: sw.organization || '',
+    modified: timestampCell(sw.modified),
+  }
+}
+
+const softwareColumns = [
+  {
+    label: __('Nombre'),
+    key: 'software_name',
+    width: '16rem',
+  },
+  {
+    label: __('Organization'),
+    key: 'organization',
+    width: '12rem',
+  },
+  {
+    label: __('Last Modified'),
+    key: 'modified',
+    width: '10rem',
+  },
+]
 
 function getDealRowObject(deal) {
   return {
@@ -550,6 +653,51 @@ const dealColumns = [
 ]
 
 const { showModal } = useDoctypeModal()
+
+const showDealModal = ref(false)
+
+function createNewTabDoc(tabLabel) {
+  if (tabLabel === 'Deals') {
+    showDealModal.value = true
+  } else {
+    showModal({
+      doctype: 'Software',
+      defaults: {
+        contact: props.contactId,
+        organization: contact.doc?.company_name,
+      },
+      callbacks: { afterInsert: () => software.reload() },
+    })
+  }
+}
+
+async function addExisting(tabLabel, name) {
+  if (!name) return
+  try {
+    if (tabLabel === 'Deals') {
+      if (deals.data?.find((d) => d.name === name)) {
+        toast.error(__('Contact Already Added'))
+        return
+      }
+      await call('crm.fcrm.doctype.crm_deal.crm_deal.add_contact', {
+        deal: name,
+        contact: props.contactId,
+      })
+      deals.reload()
+    } else {
+      await call('frappe.client.set_value', {
+        doctype: 'Software',
+        name: name,
+        fieldname: 'contact',
+        value: props.contactId,
+      })
+      software.reload()
+    }
+    toast.success(__('Linked to contact'))
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error linking document'))
+  }
+}
 
 function showAddressModal(_address) {
   showModal({
