@@ -53,6 +53,9 @@
               size="sm"
             />
           </div>
+          <div v-else-if="column.key === 'industry'">
+            <IndicatorIcon v-if="item?.color" :class="item.color" />
+          </div>
         </template>
         <template #default="{ label }">
           <div
@@ -159,6 +162,7 @@
 </template>
 <script setup>
 import HeartIcon from '@/components/Icons/HeartIcon.vue'
+import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
 import ListRows from '@/components/ListViews/ListRows.vue'

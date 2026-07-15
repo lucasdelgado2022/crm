@@ -129,7 +129,7 @@
         <div v-if="fieldName === 'status'">
           <IndicatorIcon :class="getRow(itemName, fieldName).color" />
         </div>
-        <div v-else-if="fieldName === 'territory'">
+        <div v-else-if="['territory', 'industry'].includes(fieldName)">
           <IndicatorIcon
             v-if="getRow(itemName, fieldName).color"
             :class="getRow(itemName, fieldName).color"
@@ -296,6 +296,7 @@ import { globalStore } from '@/stores/global'
 import { usersStore } from '@/stores/users'
 import { statusesStore } from '@/stores/statuses'
 import { territoriesStore } from '@/stores/territories'
+import { industriesStore } from '@/stores/industries'
 import { callEnabled } from '@/composables/telephony'
 import { useBroadcast } from '@/composables/useBroadcast'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
@@ -311,6 +312,7 @@ const { makeCall } = globalStore()
 const { getUser } = usersStore()
 const { getLeadStatus } = statusesStore()
 const { getTerritory } = territoriesStore()
+const { getIndustry } = industriesStore()
 const { on } = useBroadcast()
 const { updateOnboardingStep } = useOnboarding('frappecrm')
 const { capture } = useTelemetry()
@@ -474,6 +476,11 @@ function parseRows(rows, columns = []) {
           color: lead.territory
             ? getTerritory(lead.territory)?.colorClass
             : '',
+        }
+      } else if (row == 'industry') {
+        _rows[row] = {
+          label: lead.industry,
+          color: lead.industry ? getIndustry(lead.industry)?.colorClass : '',
         }
       } else if (row == 'sla_status') {
         let value = lead.sla_status

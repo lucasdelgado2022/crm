@@ -66,6 +66,7 @@ import OrganizationModal from '@/components/Modals/OrganizationModal.vue'
 import OrganizationsListView from '@/components/ListViews/OrganizationsListView.vue'
 import ViewControls from '@/components/ViewControls.vue'
 import { getMeta } from '@/stores/meta'
+import { industriesStore } from '@/stores/industries'
 import { formatDate, website } from '@/utils'
 import { timestampCell } from '@/composables/useTimelinePreferences'
 import { ref, computed } from 'vue'
@@ -73,6 +74,7 @@ import EmptyState from '../components/ListViews/EmptyState.vue'
 
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta('CRM Organization')
+const { getIndustry } = industriesStore()
 
 const organizationsListView = ref(null)
 const showOrganizationModal = ref(false)
@@ -131,6 +133,13 @@ const rows = computed(() => {
         }
       } else if (row === 'website') {
         _rows[row] = website(organization.website)
+      } else if (row === 'industry') {
+        _rows[row] = {
+          label: organization.industry,
+          color: organization.industry
+            ? getIndustry(organization.industry)?.colorClass
+            : '',
+        }
       } else if (['modified', 'creation'].includes(row)) {
         _rows[row] = timestampCell(organization[row])
       }

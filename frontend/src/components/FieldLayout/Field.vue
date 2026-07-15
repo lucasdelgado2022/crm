@@ -104,10 +104,13 @@
         :onCreate="field.create"
         @change="(v) => fieldChange(v, field)"
       >
-        <template v-if="field.options === 'CRM Territory'" #prefix>
+        <template
+          v-if="['CRM Territory', 'CRM Industry'].includes(field.options)"
+          #prefix
+        >
           <IndicatorIcon
             v-if="data[field.fieldname]"
-            :class="getTerritory(data[field.fieldname])?.colorClass"
+            :class="linkColorClass(field.options, data[field.fieldname])"
           />
         </template>
       </Link>
@@ -342,6 +345,7 @@ import {
 } from '@/utils/fieldTransforms'
 import { usersStore } from '@/stores/users'
 import { territoriesStore } from '@/stores/territories'
+import { industriesStore } from '@/stores/industries'
 import { useDocument } from '@/data/document'
 
 import {
@@ -377,6 +381,13 @@ if (doctype) {
 
 const { users, getUser } = usersStore()
 const { getTerritory } = territoriesStore()
+const { getIndustry } = industriesStore()
+
+function linkColorClass(doctype, value) {
+  let doc =
+    doctype === 'CRM Territory' ? getTerritory(value) : getIndustry(value)
+  return doc?.colorClass
+}
 
 let triggerOnChange
 let triggerButton

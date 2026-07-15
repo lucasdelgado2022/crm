@@ -9,7 +9,8 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "industry"
+  "industry",
+  "color"
  ],
  "fields": [
   {
@@ -17,6 +18,14 @@
    "fieldtype": "Data",
    "label": "Industry",
    "unique": 1
+  },
+  {
+   "default": "gray",
+   "fieldname": "color",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Color",
+   "options": "black\ngray\nblue\ngreen\nred\npink\norange\namber\nyellow\ncyan\nteal\nviolet\npurple"
   }
  ],
  "index_web_pages_for_search": 1,

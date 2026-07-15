@@ -114,7 +114,7 @@
         <div v-if="fieldName === 'status'">
           <IndicatorIcon :class="getRow(itemName, fieldName).color" />
         </div>
-        <div v-else-if="fieldName === 'territory'">
+        <div v-else-if="['territory', 'industry'].includes(fieldName)">
           <IndicatorIcon
             v-if="getRow(itemName, fieldName).color"
             :class="getRow(itemName, fieldName).color"
@@ -271,6 +271,7 @@ import { usersStore } from '@/stores/users'
 import { organizationsStore } from '@/stores/organizations'
 import { statusesStore } from '@/stores/statuses'
 import { territoriesStore } from '@/stores/territories'
+import { industriesStore } from '@/stores/industries'
 import { callEnabled } from '@/composables/telephony'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
 import { timestampCell } from '@/composables/useTimelinePreferences'
@@ -286,6 +287,7 @@ const { getUser } = usersStore()
 const { getOrganization } = organizationsStore()
 const { getDealStatus } = statusesStore()
 const { getTerritory } = territoriesStore()
+const { getIndustry } = industriesStore()
 const { updateOnboardingStep } = useOnboarding('frappecrm')
 const { capture } = useTelemetry()
 const { showModal } = useDoctypeModal()
@@ -440,6 +442,11 @@ function parseRows(rows, columns = []) {
           color: deal.territory
             ? getTerritory(deal.territory)?.colorClass
             : '',
+        }
+      } else if (row == 'industry') {
+        _rows[row] = {
+          label: deal.industry,
+          color: deal.industry ? getIndustry(deal.industry)?.colorClass : '',
         }
       } else if (row == 'sla_status') {
         let value = deal.sla_status

@@ -36,10 +36,10 @@
               {{ option.description }}
             </div>
           </div>
-          <div v-else-if="isTerritory" class="flex-1 truncate">
+          <div v-else-if="isColoredDoctype" class="flex-1 truncate">
             <Badge
               variant="subtle"
-              :theme="getTerritory(option.value)?.color || 'gray'"
+              :theme="getOptionColor(option.value)"
               :label="option.label"
             />
           </div>
@@ -77,6 +77,7 @@
 import Autocomplete from '@/components/frappe-ui/Autocomplete.vue'
 import { isTranslatable } from '@/utils'
 import { territoriesStore } from '@/stores/territories'
+import { industriesStore } from '@/stores/industries'
 import { watchDebounced } from '@vueuse/core'
 import { createResource, Badge } from 'frappe-ui'
 import { useAttrs, computed, ref } from 'vue'
@@ -91,7 +92,19 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const { getTerritory } = territoriesStore()
-const isTerritory = computed(() => props.doctype === 'CRM Territory')
+const { getIndustry } = industriesStore()
+
+const isColoredDoctype = computed(() =>
+  ['CRM Territory', 'CRM Industry'].includes(props.doctype),
+)
+
+function getOptionColor(value) {
+  let doc =
+    props.doctype === 'CRM Territory'
+      ? getTerritory(value)
+      : getIndustry(value)
+  return doc?.color || 'gray'
+}
 
 const attrs = useAttrs()
 

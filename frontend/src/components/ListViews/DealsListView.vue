@@ -66,7 +66,7 @@
           <div v-else-if="column.key === 'status'">
             <IndicatorIcon :class="item.color" />
           </div>
-          <div v-else-if="column.key === 'territory'">
+          <div v-else-if="['territory', 'industry'].includes(column.key)">
             <IndicatorIcon v-if="item?.color" :class="item.color" />
           </div>
           <div v-else-if="column.key === 'organization'">
