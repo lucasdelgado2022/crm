@@ -215,7 +215,22 @@
           :columns="columns"
           row-key="name"
           :options="{ selectable: false, showTooltip: false }"
-        />
+        >
+          <template #cell="{ item, row, column }">
+            <Button
+              v-if="column.key === '_unlink'"
+              variant="ghost"
+              class="!h-6 !w-6"
+              :tooltip="__('Desvincular')"
+              @click.stop.prevent="unlinkSoftware(row)"
+            >
+              <FeatherIcon name="x" class="h-4 w-4 text-ink-gray-6" />
+            </Button>
+            <div v-else class="truncate text-base">
+              {{ item?.timeAgo || item?.label || item }}
+            </div>
+          </template>
+        </ListView>
         <EmptyState
           v-if="!rows.length"
           :icon="tab.icon"
@@ -609,7 +624,39 @@ const softwareColumns = [
     key: 'modified',
     width: '10rem',
   },
+  {
+    label: '',
+    key: '_unlink',
+    width: '3rem',
+  },
 ]
+
+async function unlinkSoftware(row) {
+  try {
+    if (String(row.name).startsWith('pt-')) {
+      await call('frappe.client.set_value', {
+        doctype: 'Procesos - Tecnologias',
+        name: String(row.name).slice(3),
+        fieldname: 'organization',
+        value: '',
+      })
+      procesos.reload()
+    } else {
+      let doc = await call('frappe.client.get', {
+        doctype: 'Software',
+        name: String(row.name).slice(3),
+      })
+      doc.organizations = (doc.organizations || []).filter(
+        (r) => r.organization !== props.organizationId,
+      )
+      await call('frappe.client.save', { doc: doc })
+      software.reload()
+    }
+    toast.success(__('Desvinculado de la organización'))
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al desvincular'))
+  }
+}
 
 function getDealRowObject(deal) {
   return {
