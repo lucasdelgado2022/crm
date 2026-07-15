@@ -36,6 +36,13 @@
               {{ option.description }}
             </div>
           </div>
+          <div v-else-if="isTerritory" class="flex-1 truncate">
+            <Badge
+              variant="subtle"
+              :theme="getTerritory(option.value)?.color || 'gray'"
+              :label="option.label"
+            />
+          </div>
           <div v-else class="flex-1 truncate text-ink-gray-7">
             {{ option.label }}
           </div>
@@ -69,8 +76,9 @@
 <script setup>
 import Autocomplete from '@/components/frappe-ui/Autocomplete.vue'
 import { isTranslatable } from '@/utils'
+import { territoriesStore } from '@/stores/territories'
 import { watchDebounced } from '@vueuse/core'
-import { createResource } from 'frappe-ui'
+import { createResource, Badge } from 'frappe-ui'
 import { useAttrs, computed, ref } from 'vue'
 
 const props = defineProps({
@@ -81,6 +89,9 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'change'])
+
+const { getTerritory } = territoriesStore()
+const isTerritory = computed(() => props.doctype === 'CRM Territory')
 
 const attrs = useAttrs()
 

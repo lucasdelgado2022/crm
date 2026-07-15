@@ -103,7 +103,14 @@
         :placeholder="getPlaceholder(field)"
         :onCreate="field.create"
         @change="(v) => fieldChange(v, field)"
-      />
+      >
+        <template v-if="field.options === 'CRM Territory'" #prefix>
+          <IndicatorIcon
+            v-if="data[field.fieldname]"
+            :class="getTerritory(data[field.fieldname])?.colorClass"
+          />
+        </template>
+      </Link>
       <Button
         v-if="data[field.fieldname] && field.edit"
         class="shrink-0"
@@ -334,6 +341,7 @@ import {
   applyStateFieldOptions,
 } from '@/utils/fieldTransforms'
 import { usersStore } from '@/stores/users'
+import { territoriesStore } from '@/stores/territories'
 import { useDocument } from '@/data/document'
 
 import {
@@ -368,6 +376,7 @@ if (doctype) {
 }
 
 const { users, getUser } = usersStore()
+const { getTerritory } = territoriesStore()
 
 let triggerOnChange
 let triggerButton
