@@ -36,12 +36,12 @@
               {{ option.description }}
             </div>
           </div>
-          <div v-else-if="isColoredDoctype" class="flex-1 truncate">
-            <Badge
-              variant="subtle"
-              :theme="getOptionColor(option.value)"
-              :label="option.label"
-            />
+          <div
+            v-else-if="isColoredDoctype"
+            class="flex flex-1 items-center gap-2 truncate text-ink-gray-7"
+          >
+            <IndicatorIcon :class="getOptionColorClass(option.value)" />
+            <div class="truncate">{{ option.label }}</div>
           </div>
           <div v-else class="flex-1 truncate text-ink-gray-7">
             {{ option.label }}
@@ -75,11 +75,12 @@
 
 <script setup>
 import Autocomplete from '@/components/frappe-ui/Autocomplete.vue'
+import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import { isTranslatable } from '@/utils'
 import { territoriesStore } from '@/stores/territories'
 import { industriesStore } from '@/stores/industries'
 import { watchDebounced } from '@vueuse/core'
-import { createResource, Badge } from 'frappe-ui'
+import { createResource } from 'frappe-ui'
 import { useAttrs, computed, ref } from 'vue'
 
 const props = defineProps({
@@ -98,12 +99,12 @@ const isColoredDoctype = computed(() =>
   ['CRM Territory', 'CRM Industry'].includes(props.doctype),
 )
 
-function getOptionColor(value) {
+function getOptionColorClass(value) {
   let doc =
     props.doctype === 'CRM Territory'
       ? getTerritory(value)
       : getIndustry(value)
-  return doc?.color || 'gray'
+  return doc?.colorClass || '!text-gray-600'
 }
 
 const attrs = useAttrs()

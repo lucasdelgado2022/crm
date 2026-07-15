@@ -1297,35 +1297,9 @@ function saveView() {
 }
 
 function applyFilter({ event, idx, column, item, firstColumn }) {
-  let restrictedFieldtypes = ['Datetime', 'Time']
-  if (restrictedFieldtypes.includes(column.type) || idx === 0) return
-  if (idx === 1 && firstColumn.key == '_liked_by') return
-
-  event.stopPropagation()
-  event.preventDefault()
-
-  let filters = { ...list.value.params.filters }
-
-  let value = item.name ?? item.label ?? item
-
-  if (value !== null && value !== undefined && value !== '') {
-    filters[column.key] = value
-  } else {
-    delete filters[column.key]
-  }
-
-  if (column.key == '_assign') {
-    if (item.length > 1) {
-      let target = event.target.closest('.user-avatar')
-      if (target) {
-        let name = target.getAttribute('data-name')
-        filters['_assign'] = ['LIKE', `%${name}%`]
-      }
-    } else {
-      filters['_assign'] = ['LIKE', `%${item[0].name}%`]
-    }
-  }
-  updateFilter(filters)
+  // Click-to-filter deshabilitado: clickear una celda no debe filtrar la vista.
+  // Los filtros se aplican solo desde el control de filtros de la barra.
+  return
 }
 
 function applyLikeFilter() {

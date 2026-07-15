@@ -53,7 +53,7 @@
               size="sm"
             />
           </div>
-          <div v-else-if="column.key === 'industry'">
+          <div v-else-if="['industry', 'territory'].includes(column.key)">
             <IndicatorIcon v-if="item?.color" :class="item.color" />
           </div>
         </template>
