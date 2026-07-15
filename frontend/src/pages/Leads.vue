@@ -472,14 +472,18 @@ function parseRows(rows, columns = []) {
         }
       } else if (row == 'territory') {
         _rows[row] = {
-          label: lead.territory,
+          label: lead.territory
+            ? getTerritory(lead.territory)?.short_code || lead.territory
+            : '',
           color: lead.territory
             ? getTerritory(lead.territory)?.colorClass
             : '',
         }
       } else if (row == 'industry') {
         _rows[row] = {
-          label: lead.industry,
+          label: lead.industry
+            ? getIndustry(lead.industry)?.short_code || lead.industry
+            : '',
           color: lead.industry ? getIndustry(lead.industry)?.colorClass : '',
         }
       } else if (row == 'sla_status') {

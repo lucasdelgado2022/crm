@@ -137,14 +137,20 @@ const rows = computed(() => {
         _rows[row] = website(organization.website)
       } else if (row === 'industry') {
         _rows[row] = {
-          label: organization.industry,
+          label: organization.industry
+            ? getIndustry(organization.industry)?.short_code ||
+              organization.industry
+            : '',
           color: organization.industry
             ? getIndustry(organization.industry)?.colorClass
             : '',
         }
       } else if (row === 'territory') {
         _rows[row] = {
-          label: organization.territory,
+          label: organization.territory
+            ? getTerritory(organization.territory)?.short_code ||
+              organization.territory
+            : '',
           color: organization.territory
             ? getTerritory(organization.territory)?.colorClass
             : '',

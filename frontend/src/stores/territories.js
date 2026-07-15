@@ -8,7 +8,7 @@ export const territoriesStore = defineStore('crm-territories', () => {
 
   const territories = createListResource({
     doctype: 'CRM Territory',
-    fields: ['name', 'color'],
+    fields: ['name', 'color', 'short_code'],
     orderBy: 'name asc',
     pageLength: 99999,
     cache: 'territories',

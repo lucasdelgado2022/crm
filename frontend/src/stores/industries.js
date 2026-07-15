@@ -8,7 +8,7 @@ export const industriesStore = defineStore('crm-industries', () => {
 
   const industries = createListResource({
     doctype: 'CRM Industry',
-    fields: ['name', 'color'],
+    fields: ['name', 'color', 'short_code'],
     orderBy: 'name asc',
     pageLength: 99999,
     cache: 'industries',

@@ -10,7 +10,8 @@
  "engine": "InnoDB",
  "field_order": [
   "industry",
-  "color"
+  "color",
+  "short_code"
  ],
  "fields": [
   {
@@ -26,6 +27,12 @@
    "in_list_view": 1,
    "label": "Color",
    "options": "black\ngray\nblue\ngreen\nred\npink\norange\namber\nyellow\ncyan\nteal\nviolet\npurple"
+  },
+  {
+   "fieldname": "short_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Short Code"
   }
  ],
  "index_web_pages_for_search": 1,

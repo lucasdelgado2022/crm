@@ -11,6 +11,7 @@
   "column_break_mckp",
   "territory_manager",
   "color",
+  "short_code",
   "section_break_qhaf",
   "old_parent",
   "parent_crm_territory",
@@ -45,6 +46,12 @@
    "in_list_view": 1,
    "label": "Color",
    "options": "black\ngray\nblue\ngreen\nred\npink\norange\namber\nyellow\ncyan\nteal\nviolet\npurple"
+  },
+  {
+   "fieldname": "short_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Short Code"
   },
   {
    "fieldname": "lft",
