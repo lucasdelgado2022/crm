@@ -536,10 +536,10 @@ const software = createListResource({
   type: 'list',
   doctype: 'Software',
   cache: ['software', props.organizationId],
-  fields: ['name', 'software_name', 'contact', 'modified'],
-  filters: {
-    organization: props.organizationId,
-  },
+  fields: ['name', 'software_name', 'modified'],
+  filters: [
+    ['Software Organization', 'organization', '=', props.organizationId],
+  ],
   orderBy: 'modified desc',
   pageLength: 99,
   auto: true,
@@ -580,7 +580,6 @@ function getSoftwareRowObject(sw) {
     name: 'sw-' + sw.name,
     software_name: sw.software_name,
     tipo: __('Software'),
-    contact: sw.contact || '',
     modified: timestampCell(sw.modified),
   }
 }
@@ -590,7 +589,6 @@ function getProcesoRowObject(p) {
     name: 'pt-' + p.name,
     software_name: p.nombre,
     tipo: __('Proceso / Tecnología'),
-    contact: '',
     modified: timestampCell(p.modified),
   }
 }
@@ -605,11 +603,6 @@ const softwareColumns = [
     label: __('Tipo'),
     key: 'tipo',
     width: '11rem',
-  },
-  {
-    label: __('Contacto'),
-    key: 'contact',
-    width: '12rem',
   },
   {
     label: __('Last Modified'),
@@ -753,8 +746,20 @@ const softwareCreateOptions = [
     onClick: () =>
       showModal({
         doctype: 'Software',
-        defaults: { organization: props.organizationId },
-        callbacks: { afterInsert: () => software.reload() },
+        callbacks: {
+          afterInsert: async (d) => {
+            await call('frappe.client.insert', {
+              doc: {
+                doctype: 'Software Organization',
+                parenttype: 'Software',
+                parent: d.name,
+                parentfield: 'organizations',
+                organization: props.organizationId,
+              },
+            })
+            software.reload()
+          },
+        },
       }),
   },
   {
@@ -788,15 +793,28 @@ async function linkSoftware(name) {
   if (!name) return
   showLinkSoftwareDialog.value = false
   try {
-    await call('frappe.client.set_value', {
-      doctype: linkSoftwareDoctype.value,
-      name: name,
-      fieldname: 'organization',
-      value: props.organizationId,
-    })
     if (linkSoftwareDoctype.value === 'Software') {
+      if (software.data?.find((s) => s.name === name)) {
+        toast.error(__('Ya está vinculado a esta organización'))
+        return
+      }
+      await call('frappe.client.insert', {
+        doc: {
+          doctype: 'Software Organization',
+          parenttype: 'Software',
+          parent: name,
+          parentfield: 'organizations',
+          organization: props.organizationId,
+        },
+      })
       software.reload()
     } else {
+      await call('frappe.client.set_value', {
+        doctype: linkSoftwareDoctype.value,
+        name: name,
+        fieldname: 'organization',
+        value: props.organizationId,
+      })
       procesos.reload()
     }
     toast.success(__('Linked to organization'))

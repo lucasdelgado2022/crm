@@ -369,10 +369,8 @@ const software = createListResource({
   type: 'list',
   doctype: 'Software',
   cache: ['software', props.contactId],
-  fields: ['name', 'software_name', 'organization', 'modified'],
-  filters: {
-    contact: props.contactId,
-  },
+  fields: ['name', 'software_name', 'modified'],
+  filters: [['Software Contact', 'contact', '=', props.contactId]],
   orderBy: 'modified desc',
   pageLength: 99,
   auto: true,
@@ -568,7 +566,6 @@ function getSoftwareRowObject(sw) {
   return {
     name: sw.name,
     software_name: sw.software_name,
-    organization: sw.organization || '',
     modified: timestampCell(sw.modified),
   }
 }
@@ -578,11 +575,6 @@ const softwareColumns = [
     label: __('Nombre'),
     key: 'software_name',
     width: '16rem',
-  },
-  {
-    label: __('Organization'),
-    key: 'organization',
-    width: '12rem',
   },
   {
     label: __('Last Modified'),
@@ -662,13 +654,26 @@ function createNewTabDoc(tabLabel) {
   } else {
     showModal({
       doctype: 'Software',
-      defaults: {
-        contact: props.contactId,
-        organization: contact.doc?.company_name,
+      callbacks: {
+        afterInsert: async (d) => {
+          await linkSoftwareToContact(d.name)
+          software.reload()
+        },
       },
-      callbacks: { afterInsert: () => software.reload() },
     })
   }
+}
+
+async function linkSoftwareToContact(softwareName) {
+  await call('frappe.client.insert', {
+    doc: {
+      doctype: 'Software Contact',
+      parenttype: 'Software',
+      parent: softwareName,
+      parentfield: 'contacts',
+      contact: props.contactId,
+    },
+  })
 }
 
 async function addExisting(tabLabel, name) {
@@ -685,12 +690,11 @@ async function addExisting(tabLabel, name) {
       })
       deals.reload()
     } else {
-      await call('frappe.client.set_value', {
-        doctype: 'Software',
-        name: name,
-        fieldname: 'contact',
-        value: props.contactId,
-      })
+      if (software.data?.find((s) => s.name === name)) {
+        toast.error(__('Ya está vinculado a este contacto'))
+        return
+      }
+      await linkSoftwareToContact(name)
       software.reload()
     }
     toast.success(__('Linked to contact'))
