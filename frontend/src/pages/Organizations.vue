@@ -159,6 +159,7 @@ const rows = computed(() => {
         _rows[row] = timestampCell(organization[row])
       }
     })
+    _rows.websiteUrl = organization.website || ''
     return _rows
   })
 })

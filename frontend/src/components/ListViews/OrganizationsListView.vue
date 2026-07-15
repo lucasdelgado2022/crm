@@ -37,7 +37,7 @@
       </ListHeaderItem>
     </ListHeader>
     <ListRows
-      v-slot="{ idx, column, item }"
+      v-slot="{ idx, column, item, row }"
       class="mx-3 sm:mx-5"
       :rows="rows"
       doctype="CRM Organization"
@@ -56,6 +56,20 @@
           <div v-else-if="['industry', 'territory'].includes(column.key)">
             <IndicatorIcon v-if="item?.color" :class="item.color" />
           </div>
+        </template>
+        <template #suffix>
+          <Button
+            v-if="
+              column.key === columns[columns.length - 1]?.key &&
+              row.websiteUrl
+            "
+            variant="ghost"
+            class="!h-6 !w-6 shrink-0"
+            :tooltip="__('Abrir website')"
+            @click.stop.prevent="openWebsite(row.websiteUrl)"
+          >
+            <FeatherIcon name="external-link" class="h-4 w-4 text-ink-gray-6" />
+          </Button>
         </template>
         <template #default="{ label }">
           <div
@@ -166,7 +180,7 @@ import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
 import ListRows from '@/components/ListViews/ListRows.vue'
-import { isTranslatable, formatDuration } from '@/utils'
+import { isTranslatable, formatDuration, openWebsite } from '@/utils'
 import {
   Avatar,
   ListView,
@@ -177,6 +191,7 @@ import {
   ListFooter,
   Tooltip,
   Dropdown,
+  FeatherIcon,
 } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
 import { ref, computed, watch } from 'vue'
