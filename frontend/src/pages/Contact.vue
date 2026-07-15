@@ -148,7 +148,11 @@
         <div class="flex justify-end gap-2 px-5 pt-3">
           <Link
             value=""
-            :doctype="tab.label === 'Deals' ? 'CRM Deal' : 'Software'"
+            :doctype="
+              { Deals: 'CRM Deal', Leads: 'CRM Lead', Software: 'Software' }[
+                tab.label
+              ]
+            "
             @change="(name) => addExisting(tab.label, name)"
           >
             <template #target="{ togglePopover }">
@@ -169,6 +173,13 @@
         </div>
         <DealsListView
           v-if="tab.label === 'Deals' && rows.length"
+          class="mt-4"
+          :rows="rows"
+          :columns="columns"
+          :options="{ selectable: false, showTooltip: false }"
+        />
+        <LeadsListView
+          v-if="tab.label === 'Leads' && rows.length"
           class="mt-4"
           :rows="rows"
           :columns="columns"
@@ -211,6 +222,19 @@
       organization: contact.doc?.company_name,
     }"
   />
+  <LeadModal
+    v-if="showLeadModal"
+    v-model="showLeadModal"
+    :defaults="{
+      custom_contact: props.contactId,
+      salutation: contact.doc?.salutation,
+      first_name: contact.doc?.first_name,
+      last_name: contact.doc?.last_name,
+      email: contact.doc?.email_id,
+      mobile_no: contact.doc?.mobile_no,
+      organization: contact.doc?.company_name,
+    }"
+  />
 </template>
 
 <script setup>
@@ -223,7 +247,10 @@ import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'
+import LeadsListView from '@/components/ListViews/LeadsListView.vue'
+import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
 import DealModal from '@/components/Modals/DealModal.vue'
+import LeadModal from '@/components/Modals/LeadModal.vue'
 import Link from '@/components/Controls/Link.vue'
 import CustomActions from '@/components/CustomActions.vue'
 import { validateIsImageFile, setupCustomizations } from '@/utils'
@@ -262,7 +289,7 @@ const { makeCall, $dialog, $socket } = globalStore()
 
 const { getUser } = usersStore()
 const { getOrganization } = organizationsStore()
-const { getDealStatus } = statusesStore()
+const { getDealStatus, getLeadStatus } = statusesStore()
 const { doctypeMeta } = getMeta('Contact')
 const { capture } = useTelemetry()
 
@@ -352,6 +379,11 @@ const tabs = [
     count: computed(() => deals.data?.length),
   },
   {
+    label: 'Leads',
+    icon: LeadsIcon,
+    count: computed(() => leads.data?.length),
+  },
+  {
     label: 'Software',
     icon: SoftwareIcon,
     count: computed(() => software.data?.length),
@@ -376,8 +408,34 @@ const software = createListResource({
   auto: true,
 })
 
+const leads = createListResource({
+  type: 'list',
+  doctype: 'CRM Lead',
+  cache: ['leads', props.contactId],
+  fields: [
+    'name',
+    'lead_name',
+    'image',
+    'first_name',
+    'organization',
+    'status',
+    'email',
+    'mobile_no',
+    'modified',
+  ],
+  filters: {
+    custom_contact: props.contactId,
+  },
+  orderBy: 'modified desc',
+  pageLength: 99,
+  auto: true,
+})
+
 const rows = computed(() => {
   if (tabIndex.value === 1) {
+    return leads.data?.map(getLeadRowObject) || []
+  }
+  if (tabIndex.value === 2) {
     return software.data?.map(getSoftwareRowObject) || []
   }
   if (!deals.data || deals.data == []) return []
@@ -558,9 +616,63 @@ async function deleteOption(doctype, name) {
 
 const { getFormattedCurrency } = getMeta('CRM Deal')
 
-const columns = computed(() =>
-  tabIndex.value === 1 ? softwareColumns : dealColumns,
-)
+const columns = computed(() => {
+  if (tabIndex.value === 1) return leadColumns
+  if (tabIndex.value === 2) return softwareColumns
+  return dealColumns
+})
+
+function getLeadRowObject(lead) {
+  return {
+    name: lead.name,
+    lead_name: {
+      label: lead.lead_name,
+      image: lead.image,
+      image_label: lead.first_name,
+    },
+    organization: lead.organization,
+    status: {
+      label: lead.status,
+      color: getLeadStatus(lead.status)?.color,
+    },
+    email: lead.email,
+    mobile_no: lead.mobile_no,
+    modified: timestampCell(lead.modified),
+  }
+}
+
+const leadColumns = [
+  {
+    label: __('Name'),
+    key: 'lead_name',
+    width: '12rem',
+  },
+  {
+    label: __('Organization'),
+    key: 'organization',
+    width: '11rem',
+  },
+  {
+    label: __('Status'),
+    key: 'status',
+    width: '10rem',
+  },
+  {
+    label: __('Email'),
+    key: 'email',
+    width: '12rem',
+  },
+  {
+    label: __('Mobile No.'),
+    key: 'mobile_no',
+    width: '11rem',
+  },
+  {
+    label: __('Last Modified'),
+    key: 'modified',
+    width: '8rem',
+  },
+]
 
 function getSoftwareRowObject(sw) {
   return {
@@ -648,9 +760,13 @@ const { showModal } = useDoctypeModal()
 
 const showDealModal = ref(false)
 
+const showLeadModal = ref(false)
+
 function createNewTabDoc(tabLabel) {
   if (tabLabel === 'Deals') {
     showDealModal.value = true
+  } else if (tabLabel === 'Leads') {
+    showLeadModal.value = true
   } else {
     showModal({
       doctype: 'Software',
@@ -689,6 +805,18 @@ async function addExisting(tabLabel, name) {
         contact: props.contactId,
       })
       deals.reload()
+    } else if (tabLabel === 'Leads') {
+      if (leads.data?.find((l) => l.name === name)) {
+        toast.error(__('Ya está vinculado a este contacto'))
+        return
+      }
+      await call('frappe.client.set_value', {
+        doctype: 'CRM Lead',
+        name: name,
+        fieldname: 'custom_contact',
+        value: props.contactId,
+      })
+      leads.reload()
     } else {
       if (software.data?.find((s) => s.name === name)) {
         toast.error(__('Ya está vinculado a este contacto'))
