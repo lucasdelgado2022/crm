@@ -63,7 +63,7 @@ import { showQuickEntryModal, quickEntryProps } from '@/composables/modals'
 import { useOnboarding, useTelemetry } from 'frappe-ui/frappe'
 import { createResource, call, toast } from 'frappe-ui'
 import { useDocument } from '@/data/document'
-import { computed, onMounted, ref, nextTick } from 'vue'
+import { computed, onMounted, ref, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -81,6 +81,49 @@ const error = ref(null)
 const isLeadCreating = ref(false)
 
 const { document: lead, triggerOnBeforeCreate } = useDocument('CRM Lead')
+
+// Al elegir un contacto existente, precargar sus datos en los campos vacios
+// (mismas semanticas fill-empty que el enriquecimiento por website).
+watch(
+  () => lead.doc?.custom_contact,
+  async (contactName) => {
+    if (!contactName) return
+    const c = await call('frappe.client.get_value', {
+      doctype: 'Contact',
+      filters: contactName,
+      fieldname: [
+        'salutation',
+        'first_name',
+        'last_name',
+        'gender',
+        'email_id',
+        'mobile_no',
+        'phone',
+        'designation',
+        'company_name',
+      ],
+    })
+    if (!c) return
+    const mapping = {
+      salutation: c.salutation,
+      first_name: c.first_name,
+      last_name: c.last_name,
+      gender: c.gender,
+      email: c.email_id,
+      mobile_no: c.mobile_no,
+      phone: c.phone,
+      job_title: c.designation,
+      organization: c.company_name,
+    }
+    for (const [key, value] of Object.entries(mapping)) {
+      if (!value) continue
+      const current = lead.doc[key]
+      if (current === undefined || current === null || current === '') {
+        lead.doc[key] = value
+      }
+    }
+  },
+)
 
 const isEnriching = ref(false)
 
