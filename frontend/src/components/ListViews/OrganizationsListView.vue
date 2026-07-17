@@ -72,6 +72,13 @@
           </Button>
         </template>
         <template #default="{ label }">
+          <InlineEditCell
+            :doctype="'CRM Organization'"
+            :name="row.name"
+            :column="column"
+            :disabled="idx === 0"
+            @saved="reloadList"
+          >
           <div
             v-if="['modified', 'creation'].includes(column.key)"
             class="truncate text-base"
@@ -143,6 +150,7 @@
           >
             {{ getLabel(label, column) }}
           </div>
+          </InlineEditCell>
         </template>
       </ListRowItem>
     </ListRows>
@@ -180,6 +188,7 @@ import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
 import ListRows from '@/components/ListViews/ListRows.vue'
+import InlineEditCell from '@/components/ListViews/InlineEditCell.vue'
 import { isTranslatable, formatDuration, openWebsite } from '@/utils'
 import {
   Avatar,
@@ -226,6 +235,10 @@ const route = useRoute()
 
 const pageLengthCount = defineModel({ type: Number })
 const list = defineModel('list', { type: Object })
+
+function reloadList() {
+  list.value?.reload?.()
+}
 
 function getLabel(label, column) {
   if (column.type === 'Duration') return formatDuration(label)

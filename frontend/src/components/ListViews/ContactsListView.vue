@@ -38,7 +38,7 @@
       </ListHeaderItem>
     </ListHeader>
     <ListRows
-      v-slot="{ idx, column, item }"
+      v-slot="{ idx, column, item, row }"
       class="mx-3 sm:mx-5"
       :rows="rows"
       doctype="Contact"
@@ -68,6 +68,13 @@
           </div>
         </template>
         <template #default="{ label }">
+          <InlineEditCell
+            :doctype="'Contact'"
+            :name="row.name"
+            :column="column"
+            :disabled="idx === 0"
+            @saved="reloadList"
+          >
           <div
             v-if="['modified', 'creation'].includes(column.key)"
             class="truncate text-base"
@@ -139,6 +146,7 @@
           >
             {{ getLabel(label, column) }}
           </div>
+          </InlineEditCell>
         </template>
       </ListRowItem>
     </ListRows>
@@ -177,6 +185,7 @@ import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
 import ListRows from '@/components/ListViews/ListRows.vue'
+import InlineEditCell from '@/components/ListViews/InlineEditCell.vue'
 import { isTranslatable, formatDuration } from '@/utils'
 import {
   Avatar,
@@ -222,6 +231,10 @@ const route = useRoute()
 
 const pageLengthCount = defineModel({ type: Number })
 const list = defineModel('list', { type: Object })
+
+function reloadList() {
+  list.value?.reload?.()
+}
 
 function getLabel(label, column) {
   if (column.type === 'Duration') return formatDuration(label)
