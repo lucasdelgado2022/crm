@@ -97,6 +97,12 @@ const routes = [
     props: true,
   },
   {
+    alias: '/software',
+    path: '/software/view/:viewType?',
+    name: 'Software',
+    component: () => import('@/pages/Software.vue'),
+  },
+  {
     alias: '/call-logs',
     path: '/call-logs/view/:viewType?',
     name: 'Call Logs',
