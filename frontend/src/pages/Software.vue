@@ -40,7 +40,10 @@
       :options="{
         selectable: false,
         showTooltip: false,
-        onRowClick: (row) => editSoftware(row.name),
+        getRowRoute: (row) => ({
+          name: 'SoftwareDetail',
+          params: { softwareId: row.name },
+        }),
       }"
     />
   </div>
@@ -148,14 +151,6 @@ function createSoftware() {
   showModal({
     doctype: 'Software',
     callbacks: { afterInsert: reloadAll },
-  })
-}
-
-function editSoftware(name) {
-  showModal({
-    doctype: 'Software',
-    name,
-    callbacks: { afterInsert: reloadAll, afterSave: reloadAll },
   })
 }
 

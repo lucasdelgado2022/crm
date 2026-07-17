@@ -103,6 +103,12 @@ const routes = [
     component: () => import('@/pages/Software.vue'),
   },
   {
+    path: '/software/:softwareId',
+    name: 'SoftwareDetail',
+    component: () => import('@/pages/SoftwareDetail.vue'),
+    props: true,
+  },
+  {
     alias: '/call-logs',
     path: '/call-logs/view/:viewType?',
     name: 'Call Logs',
