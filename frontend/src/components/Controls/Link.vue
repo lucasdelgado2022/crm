@@ -162,6 +162,7 @@ const options = createResource({
     txt: text.value,
     doctype: props.doctype,
     filters: props.filters,
+    page_length: 50,
   },
   transform: (data) => {
     let allData = data.map((option) => {
@@ -205,6 +206,7 @@ function reload(val, force = false) {
       txt: val,
       doctype: props.doctype,
       filters: props.filters,
+      page_length: 50,
     },
   })
   options.reload()
