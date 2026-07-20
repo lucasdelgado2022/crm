@@ -70,7 +70,8 @@ import { industriesStore } from '@/stores/industries'
 import { territoriesStore } from '@/stores/territories'
 import { formatDate, website } from '@/utils'
 import { timestampCell } from '@/composables/useTimelinePreferences'
-import { ref, computed } from 'vue'
+import { call } from 'frappe-ui'
+import { ref, computed, watch } from 'vue'
 import EmptyState from '../components/ListViews/EmptyState.vue'
 
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
@@ -83,6 +84,34 @@ const showOrganizationModal = ref(false)
 
 // organizations data is loaded in the ViewControls component
 const organizations = ref({})
+
+// Map name -> { website, linkedin } for the visible page, so the row action
+// icons work even when those fields are not displayed as columns.
+const linkMeta = ref({})
+async function loadLinkMeta() {
+  const data = organizations.value?.data?.data
+  if (!Array.isArray(data) || !data.length) return
+  const names = data.map((o) => o.name).filter(Boolean)
+  if (!names.length) return
+  try {
+    const res = await call('frappe.client.get_list', {
+      doctype: 'CRM Organization',
+      filters: { name: ['in', names] },
+      fields: ['name', 'website', 'linkedin'],
+      limit_page_length: 0,
+    })
+    const map = {}
+    for (const r of res) map[r.name] = r
+    linkMeta.value = map
+  } catch (e) {
+    // ignore — icons just won't show
+  }
+}
+watch(
+  () => organizations.value?.data?.data,
+  () => loadLinkMeta(),
+  { immediate: true },
+)
 const loadMore = ref(1)
 const triggerResize = ref(1)
 const updatedPageCount = ref(20)
@@ -159,7 +188,9 @@ const rows = computed(() => {
         _rows[row] = timestampCell(organization[row])
       }
     })
-    _rows.websiteUrl = organization.website || ''
+    _rows.websiteUrl =
+      linkMeta.value[organization.name]?.website || organization.website || ''
+    _rows.linkedinUrl = linkMeta.value[organization.name]?.linkedin || ''
     return _rows
   })
 })

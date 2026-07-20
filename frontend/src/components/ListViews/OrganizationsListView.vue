@@ -58,18 +58,32 @@
           </div>
         </template>
         <template #suffix>
-          <Button
-            v-if="
-              column.key === columns[columns.length - 1]?.key &&
-              row.websiteUrl
-            "
-            variant="ghost"
-            class="!h-6 !w-6 shrink-0"
-            :tooltip="__('Abrir website')"
-            @click.stop.prevent="openWebsite(row.websiteUrl)"
+          <div
+            v-if="column.key === 'organization_name'"
+            class="ml-1.5 flex shrink-0 items-center gap-0.5"
           >
-            <FeatherIcon name="external-link" class="h-4 w-4 text-ink-gray-6" />
-          </Button>
+            <Button
+              v-if="row.websiteUrl"
+              variant="ghost"
+              class="!h-6 !w-6"
+              :tooltip="__('Abrir website')"
+              @click.stop.prevent="openWebsite(row.websiteUrl)"
+            >
+              <FeatherIcon
+                name="external-link"
+                class="h-4 w-4 text-ink-gray-6"
+              />
+            </Button>
+            <Button
+              v-if="row.linkedinUrl"
+              variant="ghost"
+              class="!h-6 !w-6"
+              :tooltip="__('Abrir LinkedIn')"
+              @click.stop.prevent="openWebsite(row.linkedinUrl)"
+            >
+              <FeatherIcon name="linkedin" class="h-4 w-4 text-ink-gray-6" />
+            </Button>
+          </div>
         </template>
         <template #default="{ label }">
           <InlineEditCell
