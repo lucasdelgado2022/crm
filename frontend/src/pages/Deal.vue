@@ -140,7 +140,7 @@
       />
       <div
         v-if="sections.data"
-        class="flex flex-1 flex-col justify-between overflow-hidden"
+        class="flex flex-1 flex-col overflow-y-auto"
       >
         <SidePanelLayout
           :sections="sections.data"
@@ -289,6 +289,10 @@
             </div>
           </template>
         </SidePanelLayout>
+        <DealDataSidePanel
+          v-if="activeTabName === 'Data'"
+          :docname="dealId"
+        />
       </div>
     </Resizer>
   </div>
@@ -371,6 +375,7 @@ import ContactModal from '@/components/Modals/ContactModal.vue'
 import Link from '@/components/Controls/Link.vue'
 import CollapsibleSection from '@/components/CollapsibleSection.vue'
 import SidePanelLayout from '@/components/SidePanelLayout.vue'
+import DealDataSidePanel from '@/components/DealDataSidePanel.vue'
 import SLASection from '@/components/SLASection.vue'
 import CustomActions from '@/components/CustomActions.vue'
 import EnrichFromWebsite from '@/components/EnrichFromWebsite.vue'
@@ -619,6 +624,7 @@ const tabs = computed(() => {
 })
 
 const { tabIndex } = useActiveTabManager(tabs, 'lastDealTab')
+const activeTabName = computed(() => tabs.value?.[tabIndex.value]?.name)
 
 const sections = createResource({
   url: 'crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_sidepanel_sections',
