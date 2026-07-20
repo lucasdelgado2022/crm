@@ -159,6 +159,31 @@ watch([chooseExistingOrganization, chooseExistingContact], () =>
   applySectionVisibility(tabs.data),
 )
 
+// Filtrar el buscador de contacto existente por la organización elegida
+function applyContactFilter(_tabs) {
+  _tabs = _tabs || tabs.data
+  if (!_tabs) return
+  const org = deal.doc?.organization
+  _tabs.forEach((tab) => {
+    tab.sections.forEach((section) => {
+      section.columns.forEach((column) => {
+        column.fields.forEach((field) => {
+          if (field.fieldname === 'contact') {
+            if (org) {
+              field.link_filters = JSON.stringify({ company_name: org })
+            } else {
+              delete field.link_filters
+            }
+          }
+        })
+      })
+    })
+  })
+}
+
+watch(() => deal.doc?.organization, () => applyContactFilter())
+watch(chooseExistingContact, () => applyContactFilter())
+
 function applySectionVisibility(_tabs) {
   if (!_tabs) return
   let organization = chooseExistingOrganization.value
@@ -186,6 +211,7 @@ const tabs = createResource({
   transform: (_tabs) => {
     hasOrganizationSections.value = false
     applySectionVisibility(_tabs)
+    applyContactFilter(_tabs)
     return _tabs.forEach((tab) => {
       tab.sections.forEach((section) => {
         section.columns.forEach((column) => {
