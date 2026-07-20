@@ -219,6 +219,7 @@
     v-model:list="deals"
     :rows="rows"
     :columns="columns"
+    :column-totals="columnTotals"
     :options="{
       showTooltip: false,
       resizeColumn: true,
@@ -346,6 +347,28 @@ const columns = computed(() => {
   }
 
   return _columns
+})
+
+// Suma de las columnas de moneda visibles, para la fila de totales.
+const columnTotals = computed(() => {
+  const data = deals.value?.data?.data
+  if (!Array.isArray(data) || !data.length) return {}
+  const currency = data[0]?.currency
+  const totals = {}
+  columns.value.forEach((col) => {
+    if (col.type === 'Currency') {
+      let sum = 0
+      data.forEach((d) => {
+        const v = Number(d[col.key])
+        if (!isNaN(v)) sum += v
+      })
+      totals[col.key] = getFormattedCurrency(col.key, {
+        [col.key]: sum,
+        currency,
+      })
+    }
+  })
+  return totals
 })
 
 function getGroupedByRows(listRows, groupByField, columns) {

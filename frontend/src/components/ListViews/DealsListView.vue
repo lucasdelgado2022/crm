@@ -214,6 +214,26 @@
       </template>
     </ListSelectBanner>
   </ListView>
+  <div
+    v-if="hasTotals"
+    class="mx-3 grid items-center gap-4 border-t px-2 py-2.5 text-base font-semibold text-ink-gray-8 sm:mx-5"
+    :style="{ gridTemplateColumns: totalsGridTemplate }"
+  >
+    <div v-if="options?.selectable !== false" />
+    <div
+      v-for="(col, i) in columns"
+      :key="col.key"
+      class="truncate"
+      :class="
+        ['right', 'end'].includes(col.align)
+          ? 'justify-self-end'
+          : 'justify-self-start'
+      "
+    >
+      <span v-if="columnTotals[col.key]">{{ columnTotals[col.key] }}</span>
+      <span v-else-if="i === 0" class="text-ink-gray-5">{{ __('Total') }}</span>
+    </div>
+  </div>
   <ListFooter
     v-if="pageLengthCount"
     v-model="pageLengthCount"
@@ -252,9 +272,10 @@ import { sessionStore } from '@/stores/session'
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-defineProps({
+const props = defineProps({
   rows: { type: Array, required: true },
   columns: { type: Array, required: true },
+  columnTotals: { type: Object, default: () => ({}) },
   options: {
     type: Object,
     default: () => ({
@@ -265,6 +286,20 @@ defineProps({
       rowCount: 0,
     }),
   },
+})
+
+const hasTotals = computed(
+  () => Object.keys(props.columnTotals || {}).length > 0,
+)
+const totalsGridTemplate = computed(() => {
+  const checkbox = props.options?.selectable !== false ? '14px ' : ''
+  const cols = props.columns
+    .map((col) => {
+      const w = col.width || 1
+      return typeof w === 'number' ? w + 'fr' : w
+    })
+    .join(' ')
+  return checkbox + cols
 })
 
 const emit = defineEmits([
