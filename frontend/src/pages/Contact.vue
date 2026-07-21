@@ -119,103 +119,170 @@
         />
       </div>
     </Resizer>
-    <Tabs
-      v-model="tabIndex"
-      as="div"
-      :tabs="tabs"
-      class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
-    >
-      <template #tab-item="{ tab, selected }">
-        <button
-          class="group flex items-center gap-2 border-b border-transparent py-2.5 text-base text-ink-gray-5 duration-300 ease-in-out hover:text-ink-gray-9"
-          :class="{ 'text-ink-gray-9': selected }"
+    <div class="flex flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5">
+      <!-- Widget: Deals -->
+      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+        <div
+          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
         >
-          <component :is="tab.icon" v-if="tab.icon" class="h-5" />
-          {{ __(tab.label) }}
-          <Badge
-            class="group-hover:bg-surface-gray-10"
-            :class="[selected ? 'bg-surface-gray-10' : 'bg-gray-600']"
-            variant="solid"
-            theme="gray"
-            size="sm"
+          <div
+            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
           >
-            {{ tab.count }}
-          </Badge>
-        </button>
-      </template>
-      <template #tab-panel="{ tab }">
-        <div class="flex flex-1 flex-col overflow-hidden">
-        <div class="flex justify-end gap-2 px-5 pt-3">
-          <Link
-            value=""
-            :doctype="
-              { Deals: 'CRM Deal', Leads: 'CRM Lead', Software: 'Software' }[
-                tab.label
-              ]
-            "
-            @change="(name) => addExisting(tab.label, name)"
-          >
-            <template #target="{ togglePopover }">
-              <Button variant="outline" @click="togglePopover()">
-                <template #prefix>
-                  <FeatherIcon name="link" class="h-4" />
-                </template>
-                {{ __('Add Existing') }}
-              </Button>
-            </template>
-          </Link>
-          <Button variant="solid" @click="createNewTabDoc(tab.label)">
-            <template #prefix>
-              <FeatherIcon name="plus" class="h-4" />
-            </template>
-            {{ __('Create') }}
-          </Button>
-        </div>
-        <DealsListView
-          v-if="tab.label === 'Deals' && rows.length"
-          class="mt-4"
-          :rows="rows"
-          :columns="columns"
-          :options="{ selectable: false, showTooltip: false }"
-        />
-        <LeadsListView
-          v-if="tab.label === 'Leads' && rows.length"
-          class="mt-4"
-          :rows="rows"
-          :columns="columns"
-          :options="{ selectable: false, showTooltip: false }"
-        />
-        <ListView
-          v-if="tab.label === 'Software' && rows.length"
-          class="mt-4 px-5"
-          :rows="rows"
-          :columns="columns"
-          row-key="name"
-          :options="{ selectable: false, showTooltip: false }"
-        >
-          <template #cell="{ item, row, column }">
-            <Button
-              v-if="column.key === '_unlink'"
-              variant="ghost"
-              class="!h-6 !w-6"
-              :tooltip="__('Desvincular')"
-              @click.stop.prevent="unlinkSoftwareFromContact(row)"
+            <DealsIcon class="h-5" />
+            {{ __('Deals') }}
+            <Badge variant="subtle" theme="gray" size="sm">
+              {{ dealRows.length }}
+            </Badge>
+          </div>
+          <div class="flex gap-2">
+            <Link
+              value=""
+              doctype="CRM Deal"
+              @change="(name) => addExisting('Deals', name)"
             >
-              <FeatherIcon name="x" class="h-4 w-4 text-ink-gray-6" />
+              <template #target="{ togglePopover }">
+                <Button variant="outline" @click="togglePopover()">
+                  <template #prefix>
+                    <FeatherIcon name="link" class="h-4" />
+                  </template>
+                  {{ __('Add Existing') }}
+                </Button>
+              </template>
+            </Link>
+            <Button variant="solid" @click="createNewTabDoc('Deals')">
+              <template #prefix>
+                <FeatherIcon name="plus" class="h-4" />
+              </template>
+              {{ __('Create') }}
             </Button>
-            <div v-else class="truncate text-base">
-              {{ item?.timeAgo || item?.label || item }}
-            </div>
-          </template>
-        </ListView>
-        <EmptyState
-          v-if="!rows.length"
-          :icon="tab.icon"
-          :name="__(tab.label)"
-        />
+          </div>
         </div>
-      </template>
-    </Tabs>
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <DealsListView
+            v-if="dealRows.length"
+            class="py-2"
+            :rows="dealRows"
+            :columns="dealColumns"
+            :options="{ selectable: false, showTooltip: false }"
+          />
+          <EmptyState v-else :icon="DealsIcon" :name="__('Deals')" />
+        </div>
+      </div>
+
+      <!-- Widget: Leads -->
+      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+        <div
+          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
+        >
+          <div
+            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
+          >
+            <LeadsIcon class="h-5" />
+            {{ __('Leads') }}
+            <Badge variant="subtle" theme="gray" size="sm">
+              {{ leadRows.length }}
+            </Badge>
+          </div>
+          <div class="flex gap-2">
+            <Link
+              value=""
+              doctype="CRM Lead"
+              @change="(name) => addExisting('Leads', name)"
+            >
+              <template #target="{ togglePopover }">
+                <Button variant="outline" @click="togglePopover()">
+                  <template #prefix>
+                    <FeatherIcon name="link" class="h-4" />
+                  </template>
+                  {{ __('Add Existing') }}
+                </Button>
+              </template>
+            </Link>
+            <Button variant="solid" @click="createNewTabDoc('Leads')">
+              <template #prefix>
+                <FeatherIcon name="plus" class="h-4" />
+              </template>
+              {{ __('Create') }}
+            </Button>
+          </div>
+        </div>
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <LeadsListView
+            v-if="leadRows.length"
+            class="py-2"
+            :rows="leadRows"
+            :columns="leadColumns"
+            :options="{ selectable: false, showTooltip: false }"
+          />
+          <EmptyState v-else :icon="LeadsIcon" :name="__('Leads')" />
+        </div>
+      </div>
+
+      <!-- Widget: Software -->
+      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+        <div
+          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
+        >
+          <div
+            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
+          >
+            <SoftwareIcon class="h-5" />
+            {{ __('Software') }}
+            <Badge variant="subtle" theme="gray" size="sm">
+              {{ softwareRows.length }}
+            </Badge>
+          </div>
+          <div class="flex gap-2">
+            <Link
+              value=""
+              doctype="Software"
+              @change="(name) => addExisting('Software', name)"
+            >
+              <template #target="{ togglePopover }">
+                <Button variant="outline" @click="togglePopover()">
+                  <template #prefix>
+                    <FeatherIcon name="link" class="h-4" />
+                  </template>
+                  {{ __('Add Existing') }}
+                </Button>
+              </template>
+            </Link>
+            <Button variant="solid" @click="createNewTabDoc('Software')">
+              <template #prefix>
+                <FeatherIcon name="plus" class="h-4" />
+              </template>
+              {{ __('Create') }}
+            </Button>
+          </div>
+        </div>
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <ListView
+            v-if="softwareRows.length"
+            class="px-4 py-2"
+            :rows="softwareRows"
+            :columns="softwareColumns"
+            row-key="name"
+            :options="{ selectable: false, showTooltip: false }"
+          >
+            <template #cell="{ item, row, column }">
+              <Button
+                v-if="column.key === '_unlink'"
+                variant="ghost"
+                class="!h-6 !w-6"
+                :tooltip="__('Desvincular')"
+                @click.stop.prevent="unlinkSoftwareFromContact(row)"
+              >
+                <FeatherIcon name="x" class="h-4 w-4 text-ink-gray-6" />
+              </Button>
+              <div v-else class="truncate text-base">
+                {{ item?.timeAgo || item?.label || item }}
+              </div>
+            </template>
+          </ListView>
+          <EmptyState v-else :icon="SoftwareIcon" :name="__('Software')" />
+        </div>
+      </div>
+    </div>
   </div>
   <ErrorPage
     v-else-if="errorTitle"
@@ -382,28 +449,9 @@ function changeContactImage(file) {
   })
 }
 
-const tabIndex = ref(0)
 const SoftwareIcon = {
   render: () => h(FeatherIcon, { name: 'monitor', class: 'h-5 w-5' }),
 }
-
-const tabs = [
-  {
-    label: 'Deals',
-    icon: DealsIcon,
-    count: computed(() => deals.data?.length),
-  },
-  {
-    label: 'Leads',
-    icon: LeadsIcon,
-    count: computed(() => leads.data?.length),
-  },
-  {
-    label: 'Software',
-    icon: SoftwareIcon,
-    count: computed(() => software.data?.length),
-  },
-]
 
 const deals = createResource({
   url: 'crm.api.contact.get_linked_deals',
@@ -446,17 +494,13 @@ const leads = createListResource({
   auto: true,
 })
 
-const rows = computed(() => {
-  if (tabIndex.value === 1) {
-    return leads.data?.map(getLeadRowObject) || []
-  }
-  if (tabIndex.value === 2) {
-    return software.data?.map(getSoftwareRowObject) || []
-  }
-  if (!deals.data || deals.data == []) return []
-
-  return deals.data.map((row) => getDealRowObject(row))
-})
+const dealRows = computed(() =>
+  deals.data ? deals.data.map((row) => getDealRowObject(row)) : [],
+)
+const leadRows = computed(() => leads.data?.map(getLeadRowObject) || [])
+const softwareRows = computed(
+  () => software.data?.map(getSoftwareRowObject) || [],
+)
 
 const sections = createResource({
   url: 'crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_sidepanel_sections',
@@ -630,12 +674,6 @@ async function deleteOption(doctype, name) {
 }
 
 const { getFormattedCurrency } = getMeta('CRM Deal')
-
-const columns = computed(() => {
-  if (tabIndex.value === 1) return leadColumns
-  if (tabIndex.value === 2) return softwareColumns
-  return dealColumns
-})
 
 function getLeadRowObject(lead) {
   return {
