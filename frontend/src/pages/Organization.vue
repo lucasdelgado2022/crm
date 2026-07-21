@@ -116,10 +116,12 @@
         />
       </div>
     </Resizer>
-    <div class="flex flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-5">
+    <div class="flex flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5">
       <!-- Widget: Oportunidades -->
-      <div class="flex flex-col rounded-lg border">
-        <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+        <div
+          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
+        >
           <div
             class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
           >
@@ -152,19 +154,23 @@
             </Button>
           </div>
         </div>
-        <DealsListView
-          v-if="dealRows.length"
-          class="py-2"
-          :rows="dealRows"
-          :columns="dealColumns"
-          :options="{ selectable: false, showTooltip: false }"
-        />
-        <EmptyState v-else :icon="DealsIcon" :name="__('Deals')" />
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <DealsListView
+            v-if="dealRows.length"
+            class="py-2"
+            :rows="dealRows"
+            :columns="dealColumns"
+            :options="{ selectable: false, showTooltip: false }"
+          />
+          <EmptyState v-else :icon="DealsIcon" :name="__('Deals')" />
+        </div>
       </div>
 
       <!-- Widget: Contacts -->
-      <div class="flex flex-col rounded-lg border">
-        <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+        <div
+          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
+        >
           <div
             class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
           >
@@ -197,19 +203,23 @@
             </Button>
           </div>
         </div>
-        <ContactsListView
-          v-if="contactRows.length"
-          class="py-2"
-          :rows="contactRows"
-          :columns="contactColumns"
-          :options="{ selectable: false, showTooltip: false }"
-        />
-        <EmptyState v-else :icon="ContactsIcon" :name="__('Contacts')" />
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <ContactsListView
+            v-if="contactRows.length"
+            class="py-2"
+            :rows="contactRows"
+            :columns="contactColumns"
+            :options="{ selectable: false, showTooltip: false }"
+          />
+          <EmptyState v-else :icon="ContactsIcon" :name="__('Contacts')" />
+        </div>
       </div>
 
       <!-- Widget: Software -->
-      <div class="flex flex-col rounded-lg border">
-        <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+        <div
+          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
+        >
           <div
             class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
           >
@@ -244,30 +254,32 @@
             </Dropdown>
           </div>
         </div>
-        <ListView
-          v-if="softwareRows.length"
-          class="px-4 py-2"
-          :rows="softwareRows"
-          :columns="softwareColumns"
-          row-key="name"
-          :options="{ selectable: false, showTooltip: false }"
-        >
-          <template #cell="{ item, row, column }">
-            <Button
-              v-if="column.key === '_unlink'"
-              variant="ghost"
-              class="!h-6 !w-6"
-              :tooltip="__('Desvincular')"
-              @click.stop.prevent="unlinkSoftware(row)"
-            >
-              <FeatherIcon name="x" class="h-4 w-4 text-ink-gray-6" />
-            </Button>
-            <div v-else class="truncate text-base">
-              {{ item?.timeAgo || item?.label || item }}
-            </div>
-          </template>
-        </ListView>
-        <EmptyState v-else :icon="SoftwareIcon" :name="__('Software')" />
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <ListView
+            v-if="softwareRows.length"
+            class="px-4 py-2"
+            :rows="softwareRows"
+            :columns="softwareColumns"
+            row-key="name"
+            :options="{ selectable: false, showTooltip: false }"
+          >
+            <template #cell="{ item, row, column }">
+              <Button
+                v-if="column.key === '_unlink'"
+                variant="ghost"
+                class="!h-6 !w-6"
+                :tooltip="__('Desvincular')"
+                @click.stop.prevent="unlinkSoftware(row)"
+              >
+                <FeatherIcon name="x" class="h-4 w-4 text-ink-gray-6" />
+              </Button>
+              <div v-else class="truncate text-base">
+                {{ item?.timeAgo || item?.label || item }}
+              </div>
+            </template>
+          </ListView>
+          <EmptyState v-else :icon="SoftwareIcon" :name="__('Software')" />
+        </div>
       </div>
     </div>
   </div>
