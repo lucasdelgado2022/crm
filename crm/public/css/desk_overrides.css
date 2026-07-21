@@ -1,0 +1,32 @@
+/* ===== Solaer: overrides de UI del Desk de ERPNext =====
+   Objetivo: aprovechar pantallas anchas (1920x1080) con contenido full-width
+   y un menu lateral de workspaces mas compacto, al estilo del CRM.
+   Se inyecta solo en el Desk (via app_include_css del app crm). */
+
+/* 1) Contenido a ancho completo (quita el limite del contenedor Bootstrap) */
+@media (min-width: 992px) {
+  .page-body .container,
+  .layout-main .container,
+  .main-section > .container,
+  .workspace-body .container {
+    max-width: 100% !important;
+  }
+}
+
+/* 2) Menu lateral de workspaces mas compacto */
+.desk-sidebar.standard-sidebar,
+.desk-sidebar {
+  width: 185px !important;
+  min-width: 185px !important;
+}
+
+.desk-sidebar .standard-sidebar-item,
+.standard-sidebar .standard-sidebar-item {
+  padding: 6px 10px !important;
+  margin-bottom: 1px !important;
+}
+
+.desk-sidebar .standard-sidebar-section .standard-sidebar-label {
+  margin-top: var(--margin-xs) !important;
+  margin-bottom: var(--margin-xs) !important;
+}
