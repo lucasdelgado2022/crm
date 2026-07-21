@@ -116,103 +116,139 @@
         />
       </div>
     </Resizer>
-    <Tabs
-      v-model="tabIndex"
-      as="div"
-      :tabs="tabs"
-      class="flex flex-1 overflow-hidden flex-col [&_[role='tablist']]:gap-7.5 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
-    >
-      <template #tab-item="{ tab, selected }">
-        <button
-          class="group flex items-center gap-2 border-b border-transparent py-2.5 text-base text-ink-gray-5 duration-300 ease-in-out hover:text-ink-gray-9"
-          :class="{ 'text-ink-gray-9': selected }"
-        >
-          <component :is="tab.icon" v-if="tab.icon" class="h-5" />
-          {{ __(tab.label) }}
-          <Badge
-            class="group-hover:bg-surface-gray-10"
-            :class="[selected ? 'bg-surface-gray-10' : 'bg-gray-600']"
-            variant="solid"
-            theme="gray"
-            size="sm"
+    <div class="flex flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-5">
+      <!-- Widget: Oportunidades -->
+      <div class="flex flex-col rounded-lg border">
+        <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+          <div
+            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
           >
-            {{ tab.count }}
-          </Badge>
-        </button>
-      </template>
-      <template #tab-panel="{ tab }">
-        <div class="flex flex-1 flex-col overflow-hidden">
-        <div
-          v-if="['Deals', 'Contacts'].includes(tab.label)"
-          class="flex justify-end gap-2 px-5 pt-3"
-        >
-          <Link
-            value=""
-            :doctype="tab.label === 'Deals' ? 'CRM Deal' : 'Contact'"
-            @change="(name) => addExisting(tab.label, name)"
-          >
-            <template #target="{ togglePopover }">
-              <Button variant="outline" @click="togglePopover()">
-                <template #prefix>
-                  <FeatherIcon name="link" class="h-4" />
-                </template>
-                {{ __('Add Existing') }}
-              </Button>
-            </template>
-          </Link>
-          <Button variant="solid" @click="createNew(tab.label)">
-            <template #prefix>
-              <FeatherIcon name="plus" class="h-4" />
-            </template>
-            {{ __('Create') }}
-          </Button>
-        </div>
-        <div
-          v-else-if="tab.label === 'Software'"
-          class="flex justify-end gap-2 px-5 pt-3"
-        >
-          <Dropdown :options="softwareLinkOptions">
-            <Button variant="outline">
-              <template #prefix>
-                <FeatherIcon name="link" class="h-4" />
+            <DealsIcon class="h-5" />
+            {{ __('Deals') }}
+            <Badge variant="subtle" theme="gray" size="sm">
+              {{ dealRows.length }}
+            </Badge>
+          </div>
+          <div class="flex gap-2">
+            <Link
+              value=""
+              doctype="CRM Deal"
+              @change="(name) => addExisting('Deals', name)"
+            >
+              <template #target="{ togglePopover }">
+                <Button variant="outline" @click="togglePopover()">
+                  <template #prefix>
+                    <FeatherIcon name="link" class="h-4" />
+                  </template>
+                  {{ __('Add Existing') }}
+                </Button>
               </template>
-              {{ __('Add Existing') }}
-              <template #suffix>
-                <FeatherIcon name="chevron-down" class="h-4" />
-              </template>
-            </Button>
-          </Dropdown>
-          <Dropdown :options="softwareCreateOptions">
-            <Button variant="solid">
+            </Link>
+            <Button variant="solid" @click="createNew('Deals')">
               <template #prefix>
                 <FeatherIcon name="plus" class="h-4" />
               </template>
               {{ __('Create') }}
-              <template #suffix>
-                <FeatherIcon name="chevron-down" class="h-4" />
-              </template>
             </Button>
-          </Dropdown>
+          </div>
         </div>
         <DealsListView
-          v-if="tab.label === 'Deals' && rows.length"
-          class="mt-4"
-          :rows="rows"
-          :columns="columns"
+          v-if="dealRows.length"
+          class="py-2"
+          :rows="dealRows"
+          :columns="dealColumns"
           :options="{ selectable: false, showTooltip: false }"
         />
+        <EmptyState v-else :icon="DealsIcon" :name="__('Deals')" />
+      </div>
+
+      <!-- Widget: Contacts -->
+      <div class="flex flex-col rounded-lg border">
+        <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+          <div
+            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
+          >
+            <ContactsIcon class="h-5" />
+            {{ __('Contacts') }}
+            <Badge variant="subtle" theme="gray" size="sm">
+              {{ contactRows.length }}
+            </Badge>
+          </div>
+          <div class="flex gap-2">
+            <Link
+              value=""
+              doctype="Contact"
+              @change="(name) => addExisting('Contacts', name)"
+            >
+              <template #target="{ togglePopover }">
+                <Button variant="outline" @click="togglePopover()">
+                  <template #prefix>
+                    <FeatherIcon name="link" class="h-4" />
+                  </template>
+                  {{ __('Add Existing') }}
+                </Button>
+              </template>
+            </Link>
+            <Button variant="solid" @click="createNew('Contacts')">
+              <template #prefix>
+                <FeatherIcon name="plus" class="h-4" />
+              </template>
+              {{ __('Create') }}
+            </Button>
+          </div>
+        </div>
         <ContactsListView
-          v-if="tab.label === 'Contacts' && rows.length"
-          class="mt-4"
-          :rows="rows"
-          :columns="columns"
+          v-if="contactRows.length"
+          class="py-2"
+          :rows="contactRows"
+          :columns="contactColumns"
           :options="{ selectable: false, showTooltip: false }"
         />
+        <EmptyState v-else :icon="ContactsIcon" :name="__('Contacts')" />
+      </div>
+
+      <!-- Widget: Software -->
+      <div class="flex flex-col rounded-lg border">
+        <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+          <div
+            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
+          >
+            <SoftwareIcon class="h-5" />
+            {{ __('Software') }}
+            <Badge variant="subtle" theme="gray" size="sm">
+              {{ softwareRows.length }}
+            </Badge>
+          </div>
+          <div class="flex gap-2">
+            <Dropdown :options="softwareLinkOptions">
+              <Button variant="outline">
+                <template #prefix>
+                  <FeatherIcon name="link" class="h-4" />
+                </template>
+                {{ __('Add Existing') }}
+                <template #suffix>
+                  <FeatherIcon name="chevron-down" class="h-4" />
+                </template>
+              </Button>
+            </Dropdown>
+            <Dropdown :options="softwareCreateOptions">
+              <Button variant="solid">
+                <template #prefix>
+                  <FeatherIcon name="plus" class="h-4" />
+                </template>
+                {{ __('Create') }}
+                <template #suffix>
+                  <FeatherIcon name="chevron-down" class="h-4" />
+                </template>
+              </Button>
+            </Dropdown>
+          </div>
+        </div>
         <ListView
-          v-if="tab.label === 'Software' && rows.length"
-          class="mt-4 px-5"
-          :rows="rows"
-          :columns="columns"
+          v-if="softwareRows.length"
+          class="px-4 py-2"
+          :rows="softwareRows"
+          :columns="softwareColumns"
           row-key="name"
           :options="{ selectable: false, showTooltip: false }"
         >
@@ -231,14 +267,9 @@
             </div>
           </template>
         </ListView>
-        <EmptyState
-          v-if="!rows.length"
-          :icon="tab.icon"
-          :name="__(tab.label)"
-        />
-        </div>
-      </template>
-    </Tabs>
+        <EmptyState v-else :icon="SoftwareIcon" :name="__('Software')" />
+      </div>
+    </div>
   </div>
   <ErrorPage
     v-else-if="errorTitle"
@@ -482,27 +513,6 @@ const SoftwareIcon = {
   render: () => h(FeatherIcon, { name: 'monitor', class: 'h-5 w-5' }),
 }
 
-const tabIndex = ref(0)
-const tabs = [
-  {
-    label: 'Deals',
-    icon: DealsIcon,
-    count: computed(() => deals.data?.length),
-  },
-  {
-    label: 'Contacts',
-    icon: ContactsIcon,
-    count: computed(() => contacts.data?.length),
-  },
-  {
-    label: 'Software',
-    icon: SoftwareIcon,
-    count: computed(
-      () => (software.data?.length || 0) + (procesos.data?.length || 0),
-    ),
-  },
-]
-
 const deals = createListResource({
   type: 'list',
   doctype: 'CRM Deal',
@@ -573,22 +583,14 @@ const procesos = createListResource({
   auto: true,
 })
 
-const rows = computed(() => {
-  if (tabIndex.value === 0) return deals.data?.map(getDealRowObject) || []
-  if (tabIndex.value === 1) return contacts.data?.map(getContactRowObject) || []
-  return [
-    ...(software.data?.map(getSoftwareRowObject) || []),
-    ...(procesos.data?.map(getProcesoRowObject) || []),
-  ]
-})
+const dealRows = computed(() => deals.data?.map(getDealRowObject) || [])
+const contactRows = computed(() => contacts.data?.map(getContactRowObject) || [])
+const softwareRows = computed(() => [
+  ...(software.data?.map(getSoftwareRowObject) || []),
+  ...(procesos.data?.map(getProcesoRowObject) || []),
+])
 
 const { getFormattedCurrency } = getMeta('CRM Deal')
-
-const columns = computed(() => {
-  if (tabIndex.value === 0) return dealColumns
-  if (tabIndex.value === 1) return contactColumns
-  return softwareColumns
-})
 
 function getSoftwareRowObject(sw) {
   return {
