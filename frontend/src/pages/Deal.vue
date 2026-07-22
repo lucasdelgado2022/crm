@@ -227,6 +227,13 @@
                             :label="__('Primary')"
                             theme="green"
                           />
+                          <Badge
+                            v-if="contactRoles[contact.name]?.rol"
+                            class="ml-1"
+                            variant="subtle"
+                            :label="__(contactRoles[contact.name].rol)"
+                            theme="blue"
+                          />
                         </div>
                         <div class="flex items-center">
                           <Dropdown :options="contactOptions(contact)">
@@ -691,6 +698,16 @@ function contactOptions(contact) {
     })
   }
 
+  const currentRole = contactRoles.value[contact.name]?.rol
+  ;['Champion', 'Sponsor', 'Decision Maker'].forEach((rol) => {
+    options.push({
+      label: __(rol),
+      icon: currentRole === rol ? 'check' : 'user',
+      onClick: () =>
+        setContactRole(contact.name, currentRole === rol ? '' : rol),
+    })
+  })
+
   return options
 }
 
@@ -732,6 +749,8 @@ async function setPrimaryContact(contact) {
   }
 }
 
+const contactRoles = ref({})
+
 const dealContacts = createResource({
   url: 'crm.fcrm.doctype.crm_deal.api.get_deal_contacts',
   params: { name: props.dealId },
@@ -742,9 +761,43 @@ const dealContacts = createResource({
     })
     return data
   },
+  onSuccess: () => loadContactRoles(),
 })
 
 if (!dealContacts.data) dealContacts.fetch()
+
+async function loadContactRoles() {
+  try {
+    const rows = await call('frappe.client.get_list', {
+      doctype: 'CRM Contacts',
+      filters: { parenttype: 'CRM Deal', parent: props.dealId },
+      fields: ['name', 'contact', 'custom_rol'],
+      limit_page_length: 0,
+    })
+    const map = {}
+    for (const r of rows) map[r.contact] = { rowName: r.name, rol: r.custom_rol }
+    contactRoles.value = map
+  } catch (e) {
+    // ignore
+  }
+}
+
+async function setContactRole(contact, rol) {
+  const info = contactRoles.value[contact]
+  if (!info) return
+  try {
+    await call('frappe.client.set_value', {
+      doctype: 'CRM Contacts',
+      name: info.rowName,
+      fieldname: 'custom_rol',
+      value: rol || null,
+    })
+    toast.success(__('Rol actualizado'))
+    loadContactRoles()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('No se pudo actualizar el rol'))
+  }
+}
 
 function triggerCall() {
   let primaryContact = dealContacts.data?.find((c) => c.is_primary)
