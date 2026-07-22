@@ -593,8 +593,9 @@ const contacts = createListResource({
     'image',
     'email_id',
     'mobile_no',
-    'company_name',
-    'modified',
+    'custom_rol',
+    'custom_puesto',
+    'custom_relacion',
   ],
   filters: {
     company_name: props.organizationId,
@@ -759,11 +760,9 @@ function getContactRowObject(contact) {
     },
     email: contact.email_id,
     mobile_no: contact.mobile_no,
-    company_name: {
-      label: contact.company_name,
-      logo: organization.doc?.organization_logo,
-    },
-    modified: timestampCell(contact.modified),
+    rol: contact.custom_rol,
+    puesto: contact.custom_puesto,
+    relacion: contact.custom_relacion,
   }
 }
 
@@ -810,27 +809,34 @@ const contactColumns = [
   {
     label: __('Name'),
     key: 'full_name',
-    width: '17rem',
+    width: '15rem',
   },
   {
     label: __('Email'),
     key: 'email',
-    width: '12rem',
+    width: '13rem',
   },
   {
     label: __('Phone'),
     key: 'mobile_no',
-    width: '12rem',
+    width: '10rem',
   },
   {
-    label: __('Organization'),
-    key: 'company_name',
-    width: '12rem',
+    label: __('Rol'),
+    key: 'rol',
+    width: '11rem',
   },
   {
-    label: __('Last Modified'),
-    key: 'modified',
-    width: '8rem',
+    label: __('Puesto'),
+    key: 'puesto',
+    width: '11rem',
+  },
+  {
+    label: __('Relacion'),
+    key: 'relacion',
+    type: 'Rating',
+    options: 5,
+    width: '9rem',
   },
 ]
 
