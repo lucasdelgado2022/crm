@@ -154,6 +154,40 @@
             </Button>
           </div>
         </div>
+        <div
+          v-if="dealStatusCounts.length"
+          class="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2"
+        >
+          <button
+            class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+            :class="
+              dealStatusFilter === null
+                ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+                : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+            "
+            @click="dealStatusFilter = null"
+          >
+            {{ __('Todos') }}
+            <span class="text-ink-gray-5">{{ deals.data?.length || 0 }}</span>
+          </button>
+          <button
+            v-for="s in dealStatusCounts"
+            :key="s.status"
+            class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+            :class="
+              dealStatusFilter === s.status
+                ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+                : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+            "
+            @click="
+              dealStatusFilter = dealStatusFilter === s.status ? null : s.status
+            "
+          >
+            <IndicatorIcon :class="s.color" />
+            {{ s.status }}
+            <span class="text-ink-gray-5">{{ s.count }}</span>
+          </button>
+        </div>
         <div class="min-h-0 flex-1 overflow-y-auto">
           <DealsListView
             v-if="dealRows.length"
@@ -336,6 +370,7 @@ import WebsiteIcon from '@/components/Icons/WebsiteIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
+import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
 import DealModal from '@/components/Modals/DealModal.vue'
 import ContactModal from '@/components/Modals/ContactModal.vue'
@@ -595,7 +630,27 @@ const procesos = createListResource({
   auto: true,
 })
 
-const dealRows = computed(() => deals.data?.map(getDealRowObject) || [])
+const dealStatusFilter = ref(null)
+
+const dealStatusCounts = computed(() => {
+  const counts = {}
+  for (const d of deals.data || []) {
+    if (!d.status) continue
+    counts[d.status] = (counts[d.status] || 0) + 1
+  }
+  return Object.entries(counts).map(([status, count]) => ({
+    status,
+    count,
+    color: getDealStatus(status)?.color,
+  }))
+})
+
+const dealRows = computed(() => {
+  let data = deals.data || []
+  if (dealStatusFilter.value)
+    data = data.filter((d) => d.status === dealStatusFilter.value)
+  return data.map(getDealRowObject)
+})
 const contactRows = computed(() => contacts.data?.map(getContactRowObject) || [])
 const softwareRows = computed(() => [
   ...(software.data?.map(getSoftwareRowObject) || []),
