@@ -16,6 +16,12 @@
         v-if="document.actions?.length"
         :actions="document.actions"
       />
+      <Button
+        v-if="doc.organization"
+        :label="__('Open Organization')"
+        iconLeft="briefcase"
+        @click="openOrganization"
+      />
       <EnrichFromWebsite
         doctype="CRM Lead"
         :docname="leadId"
@@ -305,6 +311,14 @@ const { doctypeMeta } = getMeta('CRM Lead')
 
 const route = useRoute()
 const router = useRouter()
+
+function openOrganization() {
+  if (doc.value?.organization)
+    router.push({
+      name: 'Organization',
+      params: { organizationId: doc.value.organization },
+    })
+}
 
 const props = defineProps({
   leadId: { type: String, required: true },

@@ -16,6 +16,12 @@
         v-if="document.actions?.length"
         :actions="document.actions"
       />
+      <Button
+        v-if="doc.organization"
+        :label="__('Open Organization')"
+        iconLeft="briefcase"
+        @click="openOrganization"
+      />
       <EnrichFromWebsite
         doctype="CRM Deal"
         :docname="dealId"
@@ -429,6 +435,14 @@ const { updateOnboardingStep, isOnboardingStepsCompleted } =
 
 const route = useRoute()
 const router = useRouter()
+
+function openOrganization() {
+  if (doc.value?.organization)
+    router.push({
+      name: 'Organization',
+      params: { organizationId: doc.value.organization },
+    })
+}
 
 const props = defineProps({
   dealId: { type: String, required: true },

@@ -8,6 +8,12 @@
       </Breadcrumbs>
     </template>
     <template #right-header>
+      <Button
+        v-if="contact.doc?.company_name"
+        :label="__('Open Organization')"
+        iconLeft="briefcase"
+        @click="openOrganization"
+      />
       <CustomActions
         v-if="contact._actions?.length"
         :actions="contact._actions"
@@ -381,6 +387,14 @@ const props = defineProps({
 
 const route = useRoute()
 const router = useRouter()
+
+function openOrganization() {
+  if (contact.doc?.company_name)
+    router.push({
+      name: 'Organization',
+      params: { organizationId: contact.doc.company_name },
+    })
+}
 
 const errorTitle = ref('')
 const errorMessage = ref('')
