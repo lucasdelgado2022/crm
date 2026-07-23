@@ -126,10 +126,10 @@
         "
       >
         <div
-          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
+          class="flex shrink-0 items-center gap-3 border-b px-4 py-3"
         >
           <div
-            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
+            class="flex shrink-0 items-center gap-2 text-base font-semibold text-ink-gray-8"
           >
             <DealsIcon class="h-5" />
             {{ __('Deals') }}
@@ -137,7 +137,41 @@
               {{ dealRows.length }}
             </Badge>
           </div>
-          <div class="flex gap-2">
+          <div
+            v-if="dealStatusCounts.length && widgetShown('Deals')"
+            class="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+          >
+            <button
+              class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+              :class="
+                dealStatusFilter === null
+                  ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+                  : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+              "
+              @click="dealStatusFilter = null"
+            >
+              {{ __('Todos') }}
+              <span class="text-ink-gray-5">{{ deals.data?.length || 0 }}</span>
+            </button>
+            <button
+              v-for="s in dealStatusCounts"
+              :key="s.status"
+              class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+              :class="
+                dealStatusFilter === s.status
+                  ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+                  : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+              "
+              @click="
+                dealStatusFilter = dealStatusFilter === s.status ? null : s.status
+              "
+            >
+              <IndicatorIcon :class="s.color" />
+              {{ s.status }}
+              <span class="text-ink-gray-5">{{ s.count }}</span>
+            </button>
+          </div>
+          <div class="flex shrink-0 gap-2" :class="{ 'ml-auto': !(dealStatusCounts.length && widgetShown('Deals')) }">
             <Link
               value=""
               doctype="CRM Deal"
@@ -167,40 +201,6 @@
             </Button>
           </div>
         </div>
-        <div
-          v-if="dealStatusCounts.length && widgetShown('Deals')"
-          class="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2"
-        >
-          <button
-            class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
-            :class="
-              dealStatusFilter === null
-                ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
-                : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
-            "
-            @click="dealStatusFilter = null"
-          >
-            {{ __('Todos') }}
-            <span class="text-ink-gray-5">{{ deals.data?.length || 0 }}</span>
-          </button>
-          <button
-            v-for="s in dealStatusCounts"
-            :key="s.status"
-            class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
-            :class="
-              dealStatusFilter === s.status
-                ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
-                : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
-            "
-            @click="
-              dealStatusFilter = dealStatusFilter === s.status ? null : s.status
-            "
-          >
-            <IndicatorIcon :class="s.color" />
-            {{ s.status }}
-            <span class="text-ink-gray-5">{{ s.count }}</span>
-          </button>
-        </div>
         <div v-show="widgetShown('Deals')" class="min-h-0 flex-1 overflow-y-auto">
           <DealsListView
             v-if="dealRows.length"
@@ -222,10 +222,10 @@
         "
       >
         <div
-          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
+          class="flex shrink-0 items-center gap-3 border-b px-4 py-3"
         >
           <div
-            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
+            class="flex shrink-0 items-center gap-2 text-base font-semibold text-ink-gray-8"
           >
             <ContactsIcon class="h-5" />
             {{ __('Contacts') }}
@@ -233,7 +233,43 @@
               {{ contactRows.length }}
             </Badge>
           </div>
-          <div class="flex gap-2">
+          <div
+            v-if="contactRolCounts.length > 1 && widgetShown('Contacts')"
+            class="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+          >
+            <button
+              class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+              :class="
+                contactRolFilter === null
+                  ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+                  : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+              "
+              @click="contactRolFilter = null"
+            >
+              {{ __('Todos') }}
+              <span class="text-ink-gray-5">{{ contacts.data?.length || 0 }}</span>
+            </button>
+            <button
+              v-for="r in contactRolCounts"
+              :key="r.rol"
+              class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+              :class="
+                contactRolFilter === r.rol
+                  ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+                  : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+              "
+              @click="contactRolFilter = contactRolFilter === r.rol ? null : r.rol"
+            >
+              {{ r.rol }}
+              <span class="text-ink-gray-5">{{ r.count }}</span>
+            </button>
+          </div>
+          <div
+            class="flex shrink-0 gap-2"
+            :class="{
+              'ml-auto': !(contactRolCounts.length > 1 && widgetShown('Contacts')),
+            }"
+          >
             <Link
               value=""
               doctype="Contact"
@@ -264,37 +300,6 @@
               </template>
             </Button>
           </div>
-        </div>
-        <div
-          v-if="contactRolCounts.length > 1 && widgetShown('Contacts')"
-          class="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2"
-        >
-          <button
-            class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
-            :class="
-              contactRolFilter === null
-                ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
-                : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
-            "
-            @click="contactRolFilter = null"
-          >
-            {{ __('Todos') }}
-            <span class="text-ink-gray-5">{{ contacts.data?.length || 0 }}</span>
-          </button>
-          <button
-            v-for="r in contactRolCounts"
-            :key="r.rol"
-            class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
-            :class="
-              contactRolFilter === r.rol
-                ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
-                : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
-            "
-            @click="contactRolFilter = contactRolFilter === r.rol ? null : r.rol"
-          >
-            {{ r.rol }}
-            <span class="text-ink-gray-5">{{ r.count }}</span>
-          </button>
         </div>
         <div
           v-show="widgetShown('Contacts')"
