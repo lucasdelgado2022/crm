@@ -21,6 +21,9 @@
     <div v-else-if="title == 'Events'" class="h-full activity">
       <EventArea :doctype="doctype" :docname="docname" />
     </div>
+    <div v-else-if="title == 'Interactions'" class="h-full">
+      <InteractionArea :doctype="doctype" :docname="docname" />
+    </div>
     <div
       v-else-if="
         activities?.length ||
@@ -441,6 +444,7 @@
 import ActivityHeader from '@/components/Activities/ActivityHeader.vue'
 import EmailArea from '@/components/Activities/EmailArea.vue'
 import CommentArea from '@/components/Activities/CommentArea.vue'
+import InteractionArea from '@/components/Activities/InteractionArea.vue'
 import CallArea from '@/components/Activities/CallArea.vue'
 import NoteArea from '@/components/Activities/NoteArea.vue'
 import TaskArea from '@/components/Activities/TaskArea.vue'

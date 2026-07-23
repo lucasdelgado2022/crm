@@ -253,6 +253,7 @@ import ActivityIcon from '@/components/Icons/ActivityIcon.vue'
 import EmailIcon from '@/components/Icons/EmailIcon.vue'
 import Email2Icon from '@/components/Icons/Email2Icon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
+import PeopleIcon from '@/components/Icons/PeopleIcon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
 import EventIcon from '@/components/Icons/EventIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
@@ -443,6 +444,11 @@ const tabs = computed(() => {
       name: 'Comments',
       label: __('Comments'),
       icon: CommentIcon,
+    },
+    {
+      name: 'Interactions',
+      label: __('Interacciones'),
+      icon: PeopleIcon,
     },
     {
       name: 'Data',
