@@ -71,7 +71,7 @@
                   </component>
                 </div>
                 <div class="flex flex-col gap-2 truncate">
-                  <div class="truncate text-3xl-medium text-ink-gray-9">
+                  <div class="truncate text-3xl-medium uppercase text-ink-gray-9">
                     <span>{{ organization.doc.name }}</span>
                   </div>
                   <div
@@ -660,6 +660,10 @@ const deals = createListResource({
     'email',
     'mobile_no',
     'deal_owner',
+    'custom_numero_solaer',
+    'custom_titulo',
+    'custom_producto',
+    'contact',
     'modified',
   ],
   filters: {
@@ -677,11 +681,16 @@ const contacts = createListResource({
   fields: [
     'name',
     'full_name',
+    'first_name',
+    'last_name',
     'image',
     'email_id',
     'mobile_no',
     'company_name',
     'custom_rol',
+    'designation',
+    'custom_engagement',
+    'custom_relacion',
     'modified',
   ],
   filters: {
@@ -849,6 +858,10 @@ function getDealRowObject(deal) {
       label: deal.deal_owner && getUser(deal.deal_owner).full_name,
       ...(deal.deal_owner && getUser(deal.deal_owner)),
     },
+    custom_numero_solaer: deal.custom_numero_solaer,
+    custom_titulo: deal.custom_titulo,
+    custom_producto: deal.custom_producto,
+    contact: deal.contact,
     modified: timestampCell(deal.modified),
   }
 }
@@ -861,6 +874,12 @@ function getContactRowObject(contact) {
       image_label: contact.full_name,
       image: contact.image,
     },
+    first_name: contact.first_name,
+    last_name: (contact.last_name || '').toUpperCase(),
+    custom_rol: contact.custom_rol,
+    designation: contact.designation,
+    custom_engagement: contact.custom_engagement,
+    custom_relacion: contact.custom_relacion,
     email: contact.email_id,
     mobile_no: contact.mobile_no,
     company_name: {
@@ -873,12 +892,22 @@ function getContactRowObject(contact) {
 
 const dealColumns = [
   {
-    label: __('Organization'),
-    key: 'organization',
-    width: '11rem',
+    label: __('N° Solaer'),
+    key: 'custom_numero_solaer',
+    width: '5rem',
   },
   {
-    label: __('Amount'),
+    label: __('Título'),
+    key: 'custom_titulo',
+    width: '12rem',
+  },
+  {
+    label: __('Producto'),
+    key: 'custom_producto',
+    width: '10rem',
+  },
+  {
+    label: __('Monto'),
     key: 'annual_revenue',
     align: 'right',
     width: '9rem',
@@ -889,32 +918,47 @@ const dealColumns = [
     width: '10rem',
   },
   {
-    label: __('Email'),
-    key: 'email',
+    label: __('Contacto primario'),
+    key: 'contact',
     width: '12rem',
   },
   {
-    label: __('Mobile No.'),
-    key: 'mobile_no',
-    width: '11rem',
-  },
-  {
-    label: __('Deal Owner'),
+    label: __('Responsable comercial'),
     key: 'deal_owner',
-    width: '10rem',
-  },
-  {
-    label: __('Last Modified'),
-    key: 'modified',
-    width: '8rem',
+    width: '11rem',
   },
 ]
 
 const contactColumns = [
   {
-    label: __('Name'),
-    key: 'full_name',
-    width: '17rem',
+    label: __('Nombre'),
+    key: 'first_name',
+    width: '9rem',
+  },
+  {
+    label: __('Apellido'),
+    key: 'last_name',
+    width: '9rem',
+  },
+  {
+    label: __('Rol'),
+    key: 'custom_rol',
+    width: '8rem',
+  },
+  {
+    label: __('Designation'),
+    key: 'designation',
+    width: '10rem',
+  },
+  {
+    label: __('Engagement'),
+    key: 'custom_engagement',
+    width: '9rem',
+  },
+  {
+    label: __('Relación'),
+    key: 'custom_relacion',
+    width: '7rem',
   },
   {
     label: __('Email'),
@@ -922,19 +966,9 @@ const contactColumns = [
     width: '12rem',
   },
   {
-    label: __('Phone'),
+    label: __('Teléfono'),
     key: 'mobile_no',
-    width: '12rem',
-  },
-  {
-    label: __('Organization'),
-    key: 'company_name',
-    width: '12rem',
-  },
-  {
-    label: __('Last Modified'),
-    key: 'modified',
-    width: '8rem',
+    width: '11rem',
   },
 ]
 

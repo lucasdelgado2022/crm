@@ -16,12 +16,6 @@
         v-if="document.actions?.length"
         :actions="document.actions"
       />
-      <Button
-        v-if="doc.organization"
-        :label="__('Open Organization')"
-        iconLeft="briefcase"
-        @click="openOrganization"
-      />
       <EnrichFromWebsite
         doctype="CRM Deal"
         :docname="dealId"
@@ -88,7 +82,7 @@
         </Tooltip>
         <div class="flex flex-col gap-2.5 truncate text-ink-gray-9">
           <Tooltip :text="organization?.name || __('Set an Organization')">
-            <div class="truncate text-3xl-medium">
+            <div class="truncate text-3xl-medium uppercase">
               {{ title }}
             </div>
           </Tooltip>
@@ -110,6 +104,13 @@
                       __('Please set an email address to send emails'),
                     )
               "
+            />
+
+            <Button
+              v-if="doc.organization"
+              :tooltip="__('Open Organization')"
+              :icon="ArrowUpRightIcon"
+              @click="openOrganization"
             />
 
             <Button

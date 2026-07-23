@@ -79,6 +79,7 @@ import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import { isTranslatable } from '@/utils'
 import { territoriesStore } from '@/stores/territories'
 import { industriesStore } from '@/stores/industries'
+import { productsStore } from '@/stores/products'
 import { watchDebounced } from '@vueuse/core'
 import { createResource } from 'frappe-ui'
 import { useAttrs, computed, ref } from 'vue'
@@ -94,16 +95,19 @@ const emit = defineEmits(['update:modelValue', 'change'])
 
 const { getTerritory } = territoriesStore()
 const { getIndustry } = industriesStore()
+const { getProduct } = productsStore()
 
 const isColoredDoctype = computed(() =>
-  ['CRM Territory', 'CRM Industry'].includes(props.doctype),
+  ['CRM Territory', 'CRM Industry', 'CRM Product'].includes(props.doctype),
 )
 
 function getOptionColorClass(value) {
   let doc =
     props.doctype === 'CRM Territory'
       ? getTerritory(value)
-      : getIndustry(value)
+      : props.doctype === 'CRM Industry'
+        ? getIndustry(value)
+        : getProduct(value)
   return doc?.colorClass || '!text-gray-600'
 }
 
