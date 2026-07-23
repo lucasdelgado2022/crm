@@ -349,6 +349,13 @@
                           :disabled="Boolean(field.read_only)"
                           @change="(v) => fieldChange(v, field)"
                         />
+                        <TableMultiselectInput
+                          v-else-if="field.fieldtype === 'Table MultiSelect'"
+                          class="form-control"
+                          :doctype="field.options"
+                          v-model="doc[field.fieldname]"
+                          @change="(v) => fieldChange(v, field)"
+                        />
                         <FormControl
                           v-else
                           class="form-control"
@@ -407,6 +414,7 @@ import Password from '@/components/Controls/Password.vue'
 import FormattedInput from '@/components/Controls/FormattedInput.vue'
 import DurationInput from '@/components/Controls/DurationInput.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
+import TableMultiselectInput from '@/components/Controls/TableMultiselectInput.vue'
 import AttachControl from '@/components/Controls/AttachControl.vue'
 import HtmlControl from '@/components/Controls/HtmlControl.vue'
 import GeolocationControl from '@/components/Controls/GeolocationControl.vue'
