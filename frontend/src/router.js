@@ -109,6 +109,11 @@ const routes = [
     props: true,
   },
   {
+    path: '/attachments',
+    name: 'Attachments',
+    component: () => import('@/pages/Attachments.vue'),
+  },
+  {
     alias: '/call-logs',
     path: '/call-logs/view/:viewType?',
     name: 'Call Logs',
