@@ -42,6 +42,13 @@
     </LayoutHeader>
 
     <div class="p-5 pb-2 flex items-center gap-4">
+      <Dropdown v-if="dashboards.data?.length" :options="dashboardOptions">
+        <Button
+          variant="outline"
+          :label="selectedDashboardTitle"
+          iconRight="chevron-down"
+        />
+      </Dropdown>
       <Dropdown
         v-if="!showDatePicker"
         v-model="preset"
@@ -149,8 +156,10 @@ import { getLastXDays, formatter, formatRange } from '@/utils/dashboard'
 import {
   usePageMeta,
   createResource,
+  createListResource,
   DateRangePicker,
   Dropdown,
+  Button,
   Tooltip,
 } from 'frappe-ui'
 import { ref, reactive, computed, provide } from 'vue'
@@ -163,6 +172,7 @@ const showDatePicker = ref(false)
 const datePickerRef = ref(null)
 const preset = ref('Last 30 Days')
 const showAddChartModal = ref(false)
+const selectedDashboard = ref('Manager Dashboard')
 
 const filters = reactive({
   period: getLastXDays(),
@@ -242,10 +252,40 @@ const dashboardItems = createResource({
       from_date: fromDate.value,
       to_date: toDate.value,
       user: filters.user,
+      dashboard: selectedDashboard.value,
     }
   },
   auto: true,
 })
+
+const dashboards = createListResource({
+  doctype: 'CRM Dashboard',
+  fields: ['name', 'title'],
+  orderBy: 'creation asc',
+  pageLength: 50,
+  auto: true,
+  onSuccess: (data: any[]) => {
+    if (data?.length && !data.find((d) => d.name === selectedDashboard.value)) {
+      selectedDashboard.value = data[0].name
+      dashboardItems.reload()
+    }
+  },
+})
+
+const selectedDashboardTitle = computed(() => {
+  const d = dashboards.data?.find((x: any) => x.name === selectedDashboard.value)
+  return d?.title || selectedDashboard.value
+})
+
+const dashboardOptions = computed(() =>
+  (dashboards.data || []).map((d: any) => ({
+    label: d.title || d.name,
+    onClick: () => {
+      selectedDashboard.value = d.name
+      dashboardItems.reload()
+    },
+  })),
+)
 
 const dirty = computed(() => {
   if (!editing.value) return false
@@ -286,7 +326,7 @@ function save() {
 
   saveDashboard.submit({
     doctype: 'CRM Dashboard',
-    name: 'Manager Dashboard',
+    name: selectedDashboard.value,
     fieldname: 'layout',
     value: JSON.stringify(dashboardItemsCopy),
   })

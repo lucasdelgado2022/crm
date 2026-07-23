@@ -24,7 +24,7 @@ def reset_to_default():
 
 @frappe.whitelist()
 @sales_user_only
-def get_dashboard(from_date: str | None = None, to_date: str | None = None, user: str | None = None):
+def get_dashboard(from_date: str | None = None, to_date: str | None = None, user: str | None = None, dashboard: str | None = None):
 	"""
 	Get the dashboard data for the CRM dashboard.
 	"""
@@ -40,15 +40,19 @@ def get_dashboard(from_date: str | None = None, to_date: str | None = None, user
 	if is_sales_user:
 		user = frappe.session.user
 
-	dashboard = frappe.db.exists("CRM Dashboard", "Manager Dashboard")
+	dashboard_name = dashboard or "Manager Dashboard"
+	dashboard_exists = frappe.db.exists("CRM Dashboard", dashboard_name)
 
 	layout = []
 
-	if not dashboard:
-		layout = json.loads(create_default_manager_dashboard())
-		frappe.db.commit()
+	if not dashboard_exists:
+		if dashboard_name == "Manager Dashboard":
+			layout = json.loads(create_default_manager_dashboard())
+			frappe.db.commit()
+		else:
+			layout = []
 	else:
-		layout = json.loads(frappe.db.get_value("CRM Dashboard", "Manager Dashboard", "layout") or "[]")
+		layout = json.loads(frappe.db.get_value("CRM Dashboard", dashboard_name, "layout") or "[]")
 
 	for l in layout:
 		method_name = f"get_{l['name']}"
