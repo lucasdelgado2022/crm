@@ -194,6 +194,7 @@ const files = createListResource({
     'creation',
     'owner',
     'attached_to_name',
+    'attached_to_field',
   ],
   orderBy: 'creation desc',
   pageLength: 99999,
@@ -230,7 +231,11 @@ function formatLabel(type) {
 }
 
 const rows = computed(() =>
-  (files.data || []).map((f) => {
+  (files.data || [])
+    .filter(
+      (f) => !['organization_logo', 'image'].includes(f.attached_to_field),
+    )
+    .map((f) => {
     const deal = dealMap.value[f.attached_to_name]
     return {
       ...f,

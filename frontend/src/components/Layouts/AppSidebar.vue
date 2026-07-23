@@ -268,11 +268,6 @@ const links = [
     to: 'Calendar',
   },
   {
-    label: 'Call Logs',
-    icon: PhoneIcon,
-    to: 'Call Logs',
-  },
-  {
     label: 'Attachments',
     icon: AttachmentIcon,
     to: 'Attachments',
