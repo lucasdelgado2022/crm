@@ -462,6 +462,31 @@ watch(resizeColumn, (value) => {
   updateColumns()
 })
 
+// Limpiar filtros al iniciar una NUEVA sesión del navegador.
+// sessionStorage se borra al cerrar la pestaña, así que en cada sesión nueva
+// se limpian una vez los filtros de la vista estándar (no afecta vistas guardadas).
+let sessionFiltersHandled = false
+watch(
+  () => list.value?.data,
+  (data) => {
+    if (!data || sessionFiltersHandled) return
+    sessionFiltersHandled = true
+    if (route.query.view) return
+    const key = `crm-filters-cleared-${props.doctype}`
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+    let f = view.value?.filters
+    if (typeof f === 'string') {
+      try {
+        f = JSON.parse(f || '{}')
+      } catch (e) {
+        f = {}
+      }
+    }
+    if (f && Object.keys(f).length) updateFilter({})
+  },
+)
+
 watch(updatedPageCount, (value) => {
   if (!value) return
   updatePageLength(value)
