@@ -367,6 +367,7 @@ import ActivityIcon from '@/components/Icons/ActivityIcon.vue'
 import EmailIcon from '@/components/Icons/EmailIcon.vue'
 import Email2Icon from '@/components/Icons/Email2Icon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
+import PeopleIcon from '@/components/Icons/PeopleIcon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
 import EventIcon from '@/components/Icons/EventIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
@@ -625,6 +626,11 @@ const tabs = computed(() => {
       icon: CommentIcon,
     },
     {
+      name: 'Interactions',
+      label: __('Interacciones'),
+      icon: PeopleIcon,
+    },
+    {
       name: 'Events',
       label: __('Events'),
       icon: EventIcon,
@@ -783,12 +789,24 @@ async function loadContactRoles() {
 }
 
 async function setContactRole(contact, rol) {
-  const info = contactRoles.value[contact]
-  if (!info) return
   try {
+    let rowName = contactRoles.value[contact]?.rowName
+    if (!rowName) {
+      const rows = await call('frappe.client.get_list', {
+        doctype: 'CRM Contacts',
+        filters: { parenttype: 'CRM Deal', parent: props.dealId, contact },
+        fields: ['name'],
+        limit_page_length: 1,
+      })
+      rowName = rows?.[0]?.name
+    }
+    if (!rowName) {
+      toast.error(__('No se encontró el contacto en la oportunidad'))
+      return
+    }
     await call('frappe.client.set_value', {
       doctype: 'CRM Contacts',
-      name: info.rowName,
+      name: rowName,
       fieldname: 'custom_rol',
       value: rol || null,
     })

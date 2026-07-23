@@ -72,12 +72,14 @@
     <div
       class="border-t border-outline-gray-modals bg-surface-white px-3 py-3 sm:px-8"
     >
-      <div class="flex flex-col gap-2 rounded-lg border border-outline-gray-2 p-2">
-        <!-- Origen: Cliente / Nosotros -->
-        <div class="flex items-center gap-2">
+      <div
+        class="flex flex-col gap-2.5 rounded-lg border border-outline-gray-2 p-2.5"
+      >
+        <!-- Origen (Cliente/Nosotros) + canal -->
+        <div class="flex items-center justify-between gap-2">
           <div class="flex rounded-md bg-surface-gray-2 p-0.5 text-sm">
             <button
-              class="rounded px-2.5 py-1 transition"
+              class="rounded px-3 py-1 transition"
               :class="
                 form.from_client
                   ? 'bg-surface-white font-medium text-ink-gray-9 shadow-sm'
@@ -88,7 +90,7 @@
               {{ __('Cliente') }}
             </button>
             <button
-              class="rounded px-2.5 py-1 transition"
+              class="rounded px-3 py-1 transition"
               :class="
                 !form.from_client
                   ? 'bg-surface-white font-medium text-ink-gray-9 shadow-sm'
@@ -100,54 +102,52 @@
             </button>
           </div>
 
-          <!-- Selector contacto (cliente) o nombre libre (nosotros) -->
-          <div class="min-w-0 flex-1">
-            <Link
-              v-if="form.from_client"
-              v-model="form.contact"
-              doctype="Contact"
-              :filters="contactFilters"
-              :placeholder="__('Contacto del cliente')"
-            >
-              <template #target="{ togglePopover }">
-                <button
-                  class="flex h-7 w-full items-center justify-between gap-1 rounded border border-outline-gray-2 bg-surface-white px-2 text-base"
-                  @click="togglePopover()"
-                >
-                  <span
-                    class="truncate"
-                    :class="form.contact ? 'text-ink-gray-8' : 'text-ink-gray-4'"
-                  >
-                    {{ form.contact || __('Contacto del cliente') }}
-                  </span>
-                  <FeatherIcon
-                    name="chevron-down"
-                    class="h-4 w-4 shrink-0 text-ink-gray-5"
-                  />
-                </button>
-              </template>
-            </Link>
-            <FormControl
-              v-else
-              type="text"
-              :placeholder="__('Nombre (nuestro)')"
-              v-model="form.person"
-            />
-          </div>
-
           <FormControl
-            class="w-36 shrink-0"
+            class="w-40 shrink-0"
             type="select"
             :options="channelOptions"
             v-model="form.channel"
           />
         </div>
 
-        <!-- Mensaje con control para agrandar -->
+        <!-- Selector de contacto (cliente) o nombre libre (nosotros): fila completa -->
+        <Link
+          v-if="form.from_client"
+          v-model="form.contact"
+          doctype="Contact"
+          :filters="contactFilters"
+          :placeholder="__('Contacto del cliente')"
+        >
+          <template #target="{ togglePopover }">
+            <button
+              class="flex h-8 w-full items-center justify-between gap-1 rounded border border-outline-gray-2 bg-surface-white px-2.5 text-base"
+              @click="togglePopover()"
+            >
+              <span
+                class="truncate"
+                :class="form.contact ? 'text-ink-gray-8' : 'text-ink-gray-4'"
+              >
+                {{ form.contact || __('Elegí el contacto del cliente') }}
+              </span>
+              <FeatherIcon
+                name="chevron-down"
+                class="h-4 w-4 shrink-0 text-ink-gray-5"
+              />
+            </button>
+          </template>
+        </Link>
+        <FormControl
+          v-else
+          type="text"
+          :placeholder="__('Nombre de la persona (nuestro lado)')"
+          v-model="form.person"
+        />
+
+        <!-- Mensaje (más alto) con control para agrandar -->
         <div class="relative">
           <FormControl
             type="textarea"
-            :rows="expanded ? 8 : 2"
+            :rows="expanded ? 10 : 4"
             :placeholder="__('Escribe la interacción...')"
             v-model="form.message"
             @keydown.ctrl.enter.stop="addInteraction"
@@ -237,15 +237,18 @@ const contactFilters = computed(() =>
   leadOrg.value ? { company_name: leadOrg.value } : {},
 )
 
-// Info del lead: organizacion + contacto por defecto
+// Info del lead/deal: organizacion + contacto por defecto (para filtrar el selector)
 createResource({
   url: 'frappe.client.get_value',
   params: {
-    doctype: 'CRM Lead',
+    doctype: props.doctype,
     filters: props.docname,
-    fieldname: ['organization', 'custom_contact'],
+    fieldname:
+      props.doctype === 'CRM Lead'
+        ? ['organization', 'custom_contact']
+        : ['organization'],
   },
-  auto: props.doctype === 'CRM Lead',
+  auto: ['CRM Lead', 'CRM Deal'].includes(props.doctype),
   onSuccess: (d) => {
     leadOrg.value = d?.organization || ''
     if (d?.custom_contact && !form.contact) form.contact = d.custom_contact
