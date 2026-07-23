@@ -118,7 +118,13 @@
     </Resizer>
     <div class="flex flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5">
       <!-- Widget: Oportunidades -->
-      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+      <div
+        :class="
+          widgetShown('Deals')
+            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
+            : 'flex shrink-0 flex-col rounded-lg border'
+        "
+      >
         <div
           class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
         >
@@ -135,6 +141,7 @@
             <Link
               value=""
               doctype="CRM Deal"
+              :onCreate="(v, close) => { createNew('Deals'); close && close() }"
               @change="(name) => addExisting('Deals', name)"
             >
               <template #target="{ togglePopover }">
@@ -142,20 +149,26 @@
                   <template #prefix>
                     <FeatherIcon name="link" class="h-4" />
                   </template>
-                  {{ __('Add Existing') }}
+                  {{ __('Add') }}
                 </Button>
               </template>
             </Link>
-            <Button variant="solid" @click="createNew('Deals')">
-              <template #prefix>
-                <FeatherIcon name="plus" class="h-4" />
+            <Button
+              variant="ghost"
+              :tooltip="maxWidget === 'Deals' ? __('Restaurar') : __('Maximizar')"
+              @click="toggleMax('Deals')"
+            >
+              <template #icon>
+                <component
+                  :is="maxWidget === 'Deals' ? MinimizeIcon : MaximizeIcon"
+                  class="h-4 w-4"
+                />
               </template>
-              {{ __('Create') }}
             </Button>
           </div>
         </div>
         <div
-          v-if="dealStatusCounts.length"
+          v-if="dealStatusCounts.length && widgetShown('Deals')"
           class="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2"
         >
           <button
@@ -188,7 +201,7 @@
             <span class="text-ink-gray-5">{{ s.count }}</span>
           </button>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div v-show="widgetShown('Deals')" class="min-h-0 flex-1 overflow-y-auto">
           <DealsListView
             v-if="dealRows.length"
             class="py-2"
@@ -201,7 +214,13 @@
       </div>
 
       <!-- Widget: Contacts -->
-      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+      <div
+        :class="
+          widgetShown('Contacts')
+            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
+            : 'flex shrink-0 flex-col rounded-lg border'
+        "
+      >
         <div
           class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
         >
@@ -218,6 +237,7 @@
             <Link
               value=""
               doctype="Contact"
+              :onCreate="(v, close) => { createNew('Contacts'); close && close() }"
               @change="(name) => addExisting('Contacts', name)"
             >
               <template #target="{ togglePopover }">
@@ -225,20 +245,28 @@
                   <template #prefix>
                     <FeatherIcon name="link" class="h-4" />
                   </template>
-                  {{ __('Add Existing') }}
+                  {{ __('Add') }}
                 </Button>
               </template>
             </Link>
-            <Button variant="solid" @click="createNew('Contacts')">
-              <template #prefix>
-                <FeatherIcon name="plus" class="h-4" />
+            <Button
+              variant="ghost"
+              :tooltip="
+                maxWidget === 'Contacts' ? __('Restaurar') : __('Maximizar')
+              "
+              @click="toggleMax('Contacts')"
+            >
+              <template #icon>
+                <component
+                  :is="maxWidget === 'Contacts' ? MinimizeIcon : MaximizeIcon"
+                  class="h-4 w-4"
+                />
               </template>
-              {{ __('Create') }}
             </Button>
           </div>
         </div>
         <div
-          v-if="contactRolCounts.length > 1"
+          v-if="contactRolCounts.length > 1 && widgetShown('Contacts')"
           class="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2"
         >
           <button
@@ -268,7 +296,10 @@
             <span class="text-ink-gray-5">{{ r.count }}</span>
           </button>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div
+          v-show="widgetShown('Contacts')"
+          class="min-h-0 flex-1 overflow-y-auto"
+        >
           <ContactsListView
             v-if="contactRows.length"
             class="py-2"
@@ -281,7 +312,13 @@
       </div>
 
       <!-- Widget: Software -->
-      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+      <div
+        :class="
+          widgetShown('Software')
+            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
+            : 'flex shrink-0 flex-col rounded-lg border'
+        "
+      >
         <div
           class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
         >
@@ -295,31 +332,37 @@
             </Badge>
           </div>
           <div class="flex gap-2">
-            <Dropdown :options="softwareLinkOptions">
+            <Dropdown :options="[...softwareLinkOptions, ...softwareCreateOptions]">
               <Button variant="outline">
                 <template #prefix>
                   <FeatherIcon name="link" class="h-4" />
                 </template>
-                {{ __('Add Existing') }}
+                {{ __('Add') }}
                 <template #suffix>
                   <FeatherIcon name="chevron-down" class="h-4" />
                 </template>
               </Button>
             </Dropdown>
-            <Dropdown :options="softwareCreateOptions">
-              <Button variant="solid">
-                <template #prefix>
-                  <FeatherIcon name="plus" class="h-4" />
-                </template>
-                {{ __('Create') }}
-                <template #suffix>
-                  <FeatherIcon name="chevron-down" class="h-4" />
-                </template>
-              </Button>
-            </Dropdown>
+            <Button
+              variant="ghost"
+              :tooltip="
+                maxWidget === 'Software' ? __('Restaurar') : __('Maximizar')
+              "
+              @click="toggleMax('Software')"
+            >
+              <template #icon>
+                <component
+                  :is="maxWidget === 'Software' ? MinimizeIcon : MaximizeIcon"
+                  class="h-4 w-4"
+                />
+              </template>
+            </Button>
           </div>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div
+          v-show="widgetShown('Software')"
+          class="min-h-0 flex-1 overflow-y-auto"
+        >
           <ListView
             v-if="softwareRows.length"
             class="px-4 py-2"
@@ -402,6 +445,8 @@ import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
+import MaximizeIcon from '@/components/Icons/MaximizeIcon.vue'
+import MinimizeIcon from '@/components/Icons/MinimizeIcon.vue'
 import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
 import DealModal from '@/components/Modals/DealModal.vue'
 import ContactModal from '@/components/Modals/ContactModal.vue'
@@ -458,6 +503,15 @@ const errorTitle = ref('')
 const errorMessage = ref('')
 
 const showDeleteLinkedDocModal = ref(false)
+
+// Maximizar widget (deja solo los encabezados de los demas)
+const maxWidget = ref(null)
+function toggleMax(key) {
+  maxWidget.value = maxWidget.value === key ? null : key
+}
+function widgetShown(key) {
+  return !maxWidget.value || maxWidget.value === key
+}
 
 const {
   document: organization,

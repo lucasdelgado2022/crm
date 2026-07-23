@@ -127,7 +127,13 @@
     </Resizer>
     <div class="flex flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5">
       <!-- Widget: Deals -->
-      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+      <div
+        :class="
+          widgetShown('Deals')
+            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
+            : 'flex shrink-0 flex-col rounded-lg border'
+        "
+      >
         <div
           class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
         >
@@ -144,6 +150,7 @@
             <Link
               value=""
               doctype="CRM Deal"
+              :onCreate="(v, close) => { createNewTabDoc('Deals'); close && close() }"
               @change="(name) => addExisting('Deals', name)"
             >
               <template #target="{ togglePopover }">
@@ -151,19 +158,25 @@
                   <template #prefix>
                     <FeatherIcon name="link" class="h-4" />
                   </template>
-                  {{ __('Add Existing') }}
+                  {{ __('Add') }}
                 </Button>
               </template>
             </Link>
-            <Button variant="solid" @click="createNewTabDoc('Deals')">
-              <template #prefix>
-                <FeatherIcon name="plus" class="h-4" />
+            <Button
+              variant="ghost"
+              :tooltip="maxWidget === 'Deals' ? __('Restaurar') : __('Maximizar')"
+              @click="toggleMax('Deals')"
+            >
+              <template #icon>
+                <component
+                  :is="maxWidget === 'Deals' ? MinimizeIcon : MaximizeIcon"
+                  class="h-4 w-4"
+                />
               </template>
-              {{ __('Create') }}
             </Button>
           </div>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div v-show="widgetShown('Deals')" class="min-h-0 flex-1 overflow-y-auto">
           <DealsListView
             v-if="dealRows.length"
             class="py-2"
@@ -176,7 +189,13 @@
       </div>
 
       <!-- Widget: Leads -->
-      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+      <div
+        :class="
+          widgetShown('Leads')
+            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
+            : 'flex shrink-0 flex-col rounded-lg border'
+        "
+      >
         <div
           class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
         >
@@ -193,6 +212,7 @@
             <Link
               value=""
               doctype="CRM Lead"
+              :onCreate="(v, close) => { createNewTabDoc('Leads'); close && close() }"
               @change="(name) => addExisting('Leads', name)"
             >
               <template #target="{ togglePopover }">
@@ -200,19 +220,25 @@
                   <template #prefix>
                     <FeatherIcon name="link" class="h-4" />
                   </template>
-                  {{ __('Add Existing') }}
+                  {{ __('Add') }}
                 </Button>
               </template>
             </Link>
-            <Button variant="solid" @click="createNewTabDoc('Leads')">
-              <template #prefix>
-                <FeatherIcon name="plus" class="h-4" />
+            <Button
+              variant="ghost"
+              :tooltip="maxWidget === 'Leads' ? __('Restaurar') : __('Maximizar')"
+              @click="toggleMax('Leads')"
+            >
+              <template #icon>
+                <component
+                  :is="maxWidget === 'Leads' ? MinimizeIcon : MaximizeIcon"
+                  class="h-4 w-4"
+                />
               </template>
-              {{ __('Create') }}
             </Button>
           </div>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div v-show="widgetShown('Leads')" class="min-h-0 flex-1 overflow-y-auto">
           <LeadsListView
             v-if="leadRows.length"
             class="py-2"
@@ -225,7 +251,13 @@
       </div>
 
       <!-- Widget: Software -->
-      <div class="flex min-h-0 flex-1 flex-col rounded-lg border">
+      <div
+        :class="
+          widgetShown('Software')
+            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
+            : 'flex shrink-0 flex-col rounded-lg border'
+        "
+      >
         <div
           class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
         >
@@ -242,6 +274,7 @@
             <Link
               value=""
               doctype="Software"
+              :onCreate="(v, close) => { createNewTabDoc('Software'); close && close() }"
               @change="(name) => addExisting('Software', name)"
             >
               <template #target="{ togglePopover }">
@@ -249,19 +282,30 @@
                   <template #prefix>
                     <FeatherIcon name="link" class="h-4" />
                   </template>
-                  {{ __('Add Existing') }}
+                  {{ __('Add') }}
                 </Button>
               </template>
             </Link>
-            <Button variant="solid" @click="createNewTabDoc('Software')">
-              <template #prefix>
-                <FeatherIcon name="plus" class="h-4" />
+            <Button
+              variant="ghost"
+              :tooltip="
+                maxWidget === 'Software' ? __('Restaurar') : __('Maximizar')
+              "
+              @click="toggleMax('Software')"
+            >
+              <template #icon>
+                <component
+                  :is="maxWidget === 'Software' ? MinimizeIcon : MaximizeIcon"
+                  class="h-4 w-4"
+                />
               </template>
-              {{ __('Create') }}
             </Button>
           </div>
         </div>
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div
+          v-show="widgetShown('Software')"
+          class="min-h-0 flex-1 overflow-y-auto"
+        >
           <ListView
             v-if="softwareRows.length"
             class="px-4 py-2"
@@ -334,6 +378,8 @@ import LayoutHeader from '@/components/LayoutHeader.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
+import MaximizeIcon from '@/components/Icons/MaximizeIcon.vue'
+import MinimizeIcon from '@/components/Icons/MinimizeIcon.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'
 import LeadsListView from '@/components/ListViews/LeadsListView.vue'
 import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
@@ -449,6 +495,15 @@ usePageMeta(() => {
   }
 })
 const showDeleteLinkedDocModal = ref(false)
+
+// Maximizar widget (deja solo los encabezados de los demas)
+const maxWidget = ref(null)
+function toggleMax(key) {
+  maxWidget.value = maxWidget.value === key ? null : key
+}
+function widgetShown(key) {
+  return !maxWidget.value || maxWidget.value === key
+}
 
 async function deleteContact() {
   showDeleteLinkedDocModal.value = true

@@ -19,7 +19,7 @@
             <component
               :is="fileIcon(attachment.file_type)"
               v-else
-              class="size-4 text-ink-gray-7"
+              class="size-6 text-ink-gray-7"
             />
           </div>
           <div class="flex flex-col justify-center gap-1 truncate">
@@ -70,14 +70,62 @@
         class="mx-2 h-px border-t border-outline-elevation-2"
       />
     </div>
+
+    <!-- Modal de previsualizacion (PDF / imagenes) -->
+    <Dialog v-model="showPreview" :options="{ size: '5xl' }">
+      <template #body>
+        <div class="p-4">
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <div class="truncate text-lg font-semibold text-ink-gray-8">
+              {{ previewFile?.file_name }}
+            </div>
+            <div class="flex gap-1 shrink-0">
+              <Button
+                :tooltip="__('Abrir en pestaña')"
+                @click="openInTab"
+              >
+                <template #icon>
+                  <FeatherIcon name="external-link" class="size-4" />
+                </template>
+              </Button>
+              <Button :tooltip="__('Cerrar')" @click="showPreview = false">
+                <template #icon>
+                  <FeatherIcon name="x" class="size-4" />
+                </template>
+              </Button>
+            </div>
+          </div>
+          <div
+            v-if="previewFile"
+            class="flex justify-center rounded bg-surface-gray-2"
+          >
+            <img
+              v-if="isImage(previewFile.file_type)"
+              :src="previewFile.file_url"
+              :alt="previewFile.file_name"
+              class="max-h-[78vh] max-w-full object-contain"
+            />
+            <iframe
+              v-else
+              :src="previewFile.file_url"
+              class="h-[78vh] w-full rounded"
+            />
+          </div>
+        </div>
+      </template>
+    </Dialog>
   </div>
 </template>
 <script setup>
 import FileAudioIcon from '@/components/Icons/FileAudioIcon.vue'
 import FileTextIcon from '@/components/Icons/FileTextIcon.vue'
 import FileVideoIcon from '@/components/Icons/FileVideoIcon.vue'
+import FilePdfIcon from '@/components/Icons/FilePdfIcon.vue'
+import FileWordIcon from '@/components/Icons/FileWordIcon.vue'
+import FileExcelIcon from '@/components/Icons/FileExcelIcon.vue'
 import { globalStore } from '@/stores/global'
-import { call } from 'frappe-ui'
+import { call, Dialog } from 'frappe-ui'
+import { ref } from 'vue'
 import TimelineTimestamp from '@/components/Activities/TimelineTimestamp.vue'
 import { convertSize, isImage } from '@/utils'
 
@@ -89,8 +137,25 @@ const emit = defineEmits(['reload'])
 
 const { $dialog } = globalStore()
 
+const showPreview = ref(false)
+const previewFile = ref(null)
+
+function canPreview(type) {
+  let t = (type || '').toLowerCase()
+  return isImage(type) || t === 'pdf'
+}
+
 function openFile(attachment) {
-  window.open(attachment.file_url, '_blank')
+  if (canPreview(attachment.file_type)) {
+    previewFile.value = attachment
+    showPreview.value = true
+  } else {
+    window.open(attachment.file_url, '_blank')
+  }
+}
+
+function openInTab() {
+  if (previewFile.value) window.open(previewFile.value.file_url, '_blank')
 }
 
 function togglePrivate(fileName, isPrivate) {
@@ -146,13 +211,14 @@ function deleteAttachment(fileName) {
 
 function fileIcon(type) {
   if (!type) return FileTextIcon
+  let t = type.toLowerCase()
   let audioExtentions = ['wav', 'mp3', 'ogg', 'flac', 'aac']
   let videoExtentions = ['mp4', 'avi', 'mkv', 'flv', 'mov']
-  if (audioExtentions.includes(type.toLowerCase())) {
-    return FileAudioIcon
-  } else if (videoExtentions.includes(type.toLowerCase())) {
-    return FileVideoIcon
-  }
+  if (t === 'pdf') return FilePdfIcon
+  if (['doc', 'docx'].includes(t)) return FileWordIcon
+  if (['xls', 'xlsx', 'csv'].includes(t)) return FileExcelIcon
+  if (audioExtentions.includes(t)) return FileAudioIcon
+  if (videoExtentions.includes(t)) return FileVideoIcon
   return FileTextIcon
 }
 </script>
