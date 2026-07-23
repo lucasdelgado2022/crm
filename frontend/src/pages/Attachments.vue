@@ -45,10 +45,7 @@
           v-if="formatFilter || orgFilter"
           variant="ghost"
           :label="__('Limpiar')"
-          @click="
-            formatFilter = ''
-            orgFilter = ''
-          "
+          @click="clearFilters"
         />
       </div>
     </header>
@@ -282,5 +279,10 @@ function openFile(att) {
 
 function openInTab() {
   if (previewFile.value) window.open(previewFile.value.file_url, '_blank')
+}
+
+function clearFilters() {
+  formatFilter.value = ''
+  orgFilter.value = ''
 }
 </script>
