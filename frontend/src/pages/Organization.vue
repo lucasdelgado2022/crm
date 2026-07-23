@@ -237,6 +237,37 @@
             </Button>
           </div>
         </div>
+        <div
+          v-if="contactRolCounts.length > 1"
+          class="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2"
+        >
+          <button
+            class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+            :class="
+              contactRolFilter === null
+                ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+                : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+            "
+            @click="contactRolFilter = null"
+          >
+            {{ __('Todos') }}
+            <span class="text-ink-gray-5">{{ contacts.data?.length || 0 }}</span>
+          </button>
+          <button
+            v-for="r in contactRolCounts"
+            :key="r.rol"
+            class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+            :class="
+              contactRolFilter === r.rol
+                ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+                : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+            "
+            @click="contactRolFilter = contactRolFilter === r.rol ? null : r.rol"
+          >
+            {{ r.rol }}
+            <span class="text-ink-gray-5">{{ r.count }}</span>
+          </button>
+        </div>
         <div class="min-h-0 flex-1 overflow-y-auto">
           <ContactsListView
             v-if="contactRows.length"
@@ -593,9 +624,9 @@ const contacts = createListResource({
     'image',
     'email_id',
     'mobile_no',
+    'company_name',
     'custom_rol',
-    'custom_puesto',
-    'custom_relacion',
+    'modified',
   ],
   filters: {
     company_name: props.organizationId,
@@ -652,7 +683,23 @@ const dealRows = computed(() => {
     data = data.filter((d) => d.status === dealStatusFilter.value)
   return data.map(getDealRowObject)
 })
-const contactRows = computed(() => contacts.data?.map(getContactRowObject) || [])
+const contactRolFilter = ref(null)
+
+const contactRolCounts = computed(() => {
+  const counts = {}
+  for (const c of contacts.data || []) {
+    const rol = c.custom_rol || '—'
+    counts[rol] = (counts[rol] || 0) + 1
+  }
+  return Object.entries(counts).map(([rol, count]) => ({ rol, count }))
+})
+
+const contactRows = computed(() => {
+  let data = contacts.data || []
+  if (contactRolFilter.value)
+    data = data.filter((c) => (c.custom_rol || '—') === contactRolFilter.value)
+  return data.map(getContactRowObject)
+})
 const softwareRows = computed(() => [
   ...(software.data?.map(getSoftwareRowObject) || []),
   ...(procesos.data?.map(getProcesoRowObject) || []),
@@ -760,9 +807,11 @@ function getContactRowObject(contact) {
     },
     email: contact.email_id,
     mobile_no: contact.mobile_no,
-    rol: contact.custom_rol,
-    puesto: contact.custom_puesto,
-    relacion: contact.custom_relacion,
+    company_name: {
+      label: contact.company_name,
+      logo: organization.doc?.organization_logo,
+    },
+    modified: timestampCell(contact.modified),
   }
 }
 
@@ -809,34 +858,27 @@ const contactColumns = [
   {
     label: __('Name'),
     key: 'full_name',
-    width: '15rem',
+    width: '17rem',
   },
   {
     label: __('Email'),
     key: 'email',
-    width: '13rem',
+    width: '12rem',
   },
   {
     label: __('Phone'),
     key: 'mobile_no',
-    width: '10rem',
+    width: '12rem',
   },
   {
-    label: __('Rol'),
-    key: 'rol',
-    width: '11rem',
+    label: __('Organization'),
+    key: 'company_name',
+    width: '12rem',
   },
   {
-    label: __('Puesto'),
-    key: 'puesto',
-    width: '11rem',
-  },
-  {
-    label: __('Relacion'),
-    key: 'relacion',
-    type: 'Rating',
-    options: 5,
-    width: '9rem',
+    label: __('Last Modified'),
+    key: 'modified',
+    width: '8rem',
   },
 ]
 
