@@ -83,6 +83,40 @@
                     <WebsiteIcon class="size-4" />
                     <span>{{ website(organization.doc.website) }}</span>
                   </div>
+                  <div class="flex items-center gap-3">
+                    <Link
+                      doctype="CRM Territory"
+                      :value="organization.doc.territory"
+                      @change="(v) => organization.setValue.submit({ territory: v })"
+                    >
+                      <template #target="{ togglePopover }">
+                        <button
+                          class="flex items-center gap-1.5 rounded-full border border-outline-gray-2 px-2.5 py-1 text-sm text-ink-gray-7 hover:bg-surface-gray-2"
+                          @click.stop="togglePopover()"
+                        >
+                          <FeatherIcon name="globe" class="h-3.5 w-3.5" />
+                          <span
+                            :class="{
+                              'text-ink-gray-4': !organization.doc.territory,
+                            }"
+                          >
+                            {{ organization.doc.territory || __('País') }}
+                          </span>
+                          <FeatherIcon
+                            name="chevron-down"
+                            class="h-3.5 w-3.5 text-ink-gray-5"
+                          />
+                        </button>
+                      </template>
+                    </Link>
+                    <RatingInput
+                      :value="organization.doc.custom_chance"
+                      :max="5"
+                      @change="
+                        (v) => organization.setValue.submit({ custom_chance: v })
+                      "
+                    />
+                  </div>
                   <ErrorMessage :message="__(error)" />
                 </div>
               </div>
@@ -447,6 +481,7 @@ import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
 import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
+import RatingInput from '@/components/Controls/RatingInput.vue'
 import MaximizeIcon from '@/components/Icons/MaximizeIcon.vue'
 import MinimizeIcon from '@/components/Icons/MinimizeIcon.vue'
 import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
