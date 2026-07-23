@@ -1,28 +1,25 @@
 <template>
   <div class="flex h-full flex-col">
-    <!-- Lista de interacciones -->
+    <!-- Lista tipo chat -->
     <div
       v-if="interactions.data?.length"
-      class="flex-1 overflow-y-auto px-3 pt-5 sm:px-10"
+      class="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-4 sm:px-8"
     >
       <div
-        v-for="(it, i) in interactions.data"
+        v-for="it in interactions.data"
         :key="it.name"
-        class="activity grid grid-cols-[30px_minmax(auto,1fr)] gap-2"
+        class="flex w-full"
+        :class="it.from_client ? 'justify-start' : 'justify-end'"
       >
-        <div class="relative flex justify-center">
+        <div class="flex max-w-[82%] flex-col gap-1">
           <div
-            class="z-10 flex h-7 w-7 items-center justify-center rounded-full bg-surface-gray-2 text-ink-gray-7"
+            class="flex items-center gap-2 text-sm"
+            :class="it.from_client ? '' : 'flex-row-reverse'"
           >
-            <component :is="channelIcon(it.channel)" class="h-4 w-4" />
-          </div>
-          <div
-            v-if="i != interactions.data.length - 1"
-            class="absolute top-7 z-0 h-full border-l border-outline-gray-modals"
-          />
-        </div>
-        <div class="mb-4">
-          <div class="mb-1 flex items-center gap-2 text-base">
+            <component
+              :is="channelIcon(it.channel)"
+              class="h-3.5 w-3.5 text-ink-gray-5"
+            />
             <span class="font-medium text-ink-gray-8">
               {{ it.person || __('Sin nombre') }}
             </span>
@@ -33,10 +30,7 @@
               variant="subtle"
               size="sm"
             />
-            <TimelineTimestamp
-              class="ml-auto"
-              :date="it.interaction_datetime || it.creation"
-            />
+            <TimelineTimestamp :date="it.interaction_datetime || it.creation" />
             <Dropdown
               :options="[
                 {
@@ -49,12 +43,17 @@
               <Button
                 variant="ghost"
                 icon="more-horizontal"
-                class="!h-6 !w-6 text-ink-gray-5"
+                class="!h-5 !w-5 text-ink-gray-5"
               />
             </Dropdown>
           </div>
           <div
-            class="whitespace-pre-line rounded bg-surface-gray-1 px-3 py-[7.5px] text-base text-ink-gray-8"
+            class="whitespace-pre-line rounded-2xl px-3.5 py-2 text-base text-ink-gray-8"
+            :class="
+              it.from_client
+                ? 'rounded-tl-sm bg-surface-gray-2'
+                : 'rounded-tr-sm border border-outline-gray-2 bg-surface-white'
+            "
           >
             {{ it.message }}
           </div>
@@ -65,44 +64,109 @@
       v-else
       class="flex flex-1 flex-col items-center justify-center gap-2 text-ink-gray-4"
     >
-      <component :is="channelIcon('')" class="h-8 w-8" />
+      <CommentIcon class="h-8 w-8" />
       <span class="text-base">{{ __('Sin interacciones todavía') }}</span>
     </div>
 
     <!-- Compositor -->
     <div
-      class="border-t border-outline-gray-modals bg-surface-white px-3 py-3 sm:px-10"
+      class="border-t border-outline-gray-modals bg-surface-white px-3 py-3 sm:px-8"
     >
-      <div
-        class="flex flex-col gap-2 rounded-lg border border-outline-gray-2 p-2"
-      >
-        <div class="flex gap-2">
+      <div class="flex flex-col gap-2 rounded-lg border border-outline-gray-2 p-2">
+        <!-- Origen: Cliente / Nosotros -->
+        <div class="flex items-center gap-2">
+          <div class="flex rounded-md bg-surface-gray-2 p-0.5 text-sm">
+            <button
+              class="rounded px-2.5 py-1 transition"
+              :class="
+                form.from_client
+                  ? 'bg-surface-white font-medium text-ink-gray-9 shadow-sm'
+                  : 'text-ink-gray-6'
+              "
+              @click="form.from_client = true"
+            >
+              {{ __('Cliente') }}
+            </button>
+            <button
+              class="rounded px-2.5 py-1 transition"
+              :class="
+                !form.from_client
+                  ? 'bg-surface-white font-medium text-ink-gray-9 shadow-sm'
+                  : 'text-ink-gray-6'
+              "
+              @click="form.from_client = false"
+            >
+              {{ __('Nosotros') }}
+            </button>
+          </div>
+
+          <!-- Selector contacto (cliente) o nombre libre (nosotros) -->
+          <div class="min-w-0 flex-1">
+            <Link
+              v-if="form.from_client"
+              v-model="form.contact"
+              doctype="Contact"
+              :filters="contactFilters"
+              :placeholder="__('Contacto del cliente')"
+            >
+              <template #target="{ togglePopover }">
+                <button
+                  class="flex h-7 w-full items-center justify-between gap-1 rounded border border-outline-gray-2 bg-surface-white px-2 text-base"
+                  @click="togglePopover()"
+                >
+                  <span
+                    class="truncate"
+                    :class="form.contact ? 'text-ink-gray-8' : 'text-ink-gray-4'"
+                  >
+                    {{ form.contact || __('Contacto del cliente') }}
+                  </span>
+                  <FeatherIcon
+                    name="chevron-down"
+                    class="h-4 w-4 shrink-0 text-ink-gray-5"
+                  />
+                </button>
+              </template>
+            </Link>
+            <FormControl
+              v-else
+              type="text"
+              :placeholder="__('Nombre (nuestro)')"
+              v-model="form.person"
+            />
+          </div>
+
           <FormControl
-            class="flex-1"
-            type="text"
-            :placeholder="__('Persona')"
-            v-model="form.person"
-          />
-          <FormControl
-            class="w-40"
+            class="w-36 shrink-0"
             type="select"
             :options="channelOptions"
             v-model="form.channel"
           />
         </div>
-        <FormControl
-          type="textarea"
-          :rows="2"
-          :placeholder="__('Escribe la interacción...')"
-          v-model="form.message"
-          @keydown.ctrl.enter.stop="addInteraction"
-          @keydown.meta.enter.stop="addInteraction"
-        />
+
+        <!-- Mensaje con control para agrandar -->
+        <div class="relative">
+          <FormControl
+            type="textarea"
+            :rows="expanded ? 8 : 2"
+            :placeholder="__('Escribe la interacción...')"
+            v-model="form.message"
+            @keydown.ctrl.enter.stop="addInteraction"
+            @keydown.meta.enter.stop="addInteraction"
+          />
+          <Button
+            variant="ghost"
+            class="!absolute right-1 top-1 !h-6 !w-6 text-ink-gray-5"
+            :tooltip="expanded ? __('Reducir') : __('Agrandar')"
+            :icon="expanded ? 'minimize-2' : 'maximize-2'"
+            @click="expanded = !expanded"
+          />
+        </div>
+
         <div class="flex justify-end">
           <Button
             variant="solid"
             :label="__('Agregar')"
-            :loading="interactions.insert.loading"
+            :loading="sending"
             @click="addInteraction"
           />
         </div>
@@ -112,6 +176,7 @@
 </template>
 
 <script setup>
+import Link from '@/components/Controls/Link.vue'
 import TimelineTimestamp from '@/components/Activities/TimelineTimestamp.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import Email2Icon from '@/components/Icons/Email2Icon.vue'
@@ -119,14 +184,17 @@ import LinkedinIcon from '@/components/Icons/LinkedinIcon.vue'
 import PeopleIcon from '@/components/Icons/PeopleIcon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
 import {
+  createResource,
   createListResource,
+  call,
   Dropdown,
   Button,
   Badge,
   FormControl,
+  FeatherIcon,
   toast,
 } from 'frappe-ui'
-import { reactive } from 'vue'
+import { reactive, ref, computed } from 'vue'
 
 const props = defineProps({
   doctype: { type: String, default: 'CRM Lead' },
@@ -153,7 +221,36 @@ function channelIcon(ch) {
   return CommentIcon
 }
 
-const form = reactive({ person: '', channel: 'Telefono', message: '' })
+const expanded = ref(false)
+const sending = ref(false)
+const leadOrg = ref('')
+
+const form = reactive({
+  from_client: true,
+  contact: '',
+  person: '',
+  channel: 'Telefono',
+  message: '',
+})
+
+const contactFilters = computed(() =>
+  leadOrg.value ? { company_name: leadOrg.value } : {},
+)
+
+// Info del lead: organizacion + contacto por defecto
+createResource({
+  url: 'frappe.client.get_value',
+  params: {
+    doctype: 'CRM Lead',
+    filters: props.docname,
+    fieldname: ['organization', 'custom_contact'],
+  },
+  auto: props.doctype === 'CRM Lead',
+  onSuccess: (d) => {
+    leadOrg.value = d?.organization || ''
+    if (d?.custom_contact && !form.contact) form.contact = d.custom_contact
+  },
+})
 
 const interactions = createListResource({
   doctype: 'CRM Interaction',
@@ -164,6 +261,8 @@ const interactions = createListResource({
   },
   fields: [
     'name',
+    'from_client',
+    'contact',
     'person',
     'channel',
     'message',
@@ -176,27 +275,60 @@ const interactions = createListResource({
   auto: true,
 })
 
-function addInteraction() {
+async function resolveContactName(contactName) {
+  if (!contactName) return ''
+  try {
+    const d = await call('frappe.client.get_value', {
+      doctype: 'Contact',
+      filters: contactName,
+      fieldname: ['first_name', 'last_name'],
+    })
+    return [d?.first_name, d?.last_name].filter(Boolean).join(' ').trim()
+  } catch (e) {
+    return contactName
+  }
+}
+
+async function addInteraction() {
   if (!form.message?.trim()) {
     toast.error(__('Escribe un mensaje'))
     return
   }
+  if (form.from_client && !form.contact) {
+    toast.error(__('Elegí un contacto del cliente'))
+    return
+  }
+  if (!form.from_client && !form.person?.trim()) {
+    toast.error(__('Escribí el nombre'))
+    return
+  }
+  sending.value = true
+  // Nombre a mostrar
+  let personName = form.person
+  if (form.from_client) personName = await resolveContactName(form.contact)
   interactions.insert.submit(
     {
       reference_doctype: props.doctype,
       reference_docname: props.docname,
-      person: form.person,
+      from_client: form.from_client ? 1 : 0,
+      contact: form.from_client ? form.contact : null,
+      person: personName,
       channel: form.channel,
       message: form.message,
     },
     {
       onSuccess: () => {
-        form.person = ''
         form.message = ''
+        if (!form.from_client) form.person = ''
+        expanded.value = false
         interactions.reload()
+        sending.value = false
       },
       onError: (err) => {
-        toast.error(err?.messages?.[0] || __('No se pudo guardar la interacción'))
+        sending.value = false
+        toast.error(
+          err?.messages?.[0] || __('No se pudo guardar la interacción'),
+        )
       },
     },
   )
