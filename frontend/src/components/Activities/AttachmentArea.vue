@@ -38,22 +38,6 @@
           <TimelineTimestamp :date="attachment.creation" />
           <div class="flex gap-1">
             <Button
-              :tooltip="
-                attachment.is_private ? __('Make Public') : __('Make Private')
-              "
-              class="!size-5"
-              @click.stop="
-                togglePrivate(attachment.name, attachment.is_private)
-              "
-            >
-              <template #icon>
-                <FeatherIcon
-                  :name="attachment.is_private ? 'lock' : 'unlock'"
-                  class="size-3 text-ink-gray-7"
-                />
-              </template>
-            </Button>
-            <Button
               :tooltip="__('Delete Attachment')"
               class="!size-5"
               @click.stop="() => deleteAttachment(attachment.name)"
