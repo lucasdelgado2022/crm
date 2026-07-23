@@ -76,28 +76,15 @@
                   </div>
                   <div
                     v-if="organization.doc.website"
-                    class="flex items-center gap-1.5 text-base text-ink-gray-8"
+                    class="flex w-fit cursor-pointer items-center gap-1.5 text-base text-ink-gray-8 hover:text-ink-gray-9 hover:underline"
+                    :title="__('Open Website')"
+                    @click="openWebsite"
                   >
                     <WebsiteIcon class="size-4" />
                     <span>{{ website(organization.doc.website) }}</span>
                   </div>
                   <ErrorMessage :message="__(error)" />
                 </div>
-              </div>
-              <div class="flex gap-1.5">
-                <Button
-                  v-if="canDelete"
-                  :label="__('Delete')"
-                  theme="red"
-                  size="sm"
-                  iconLeft="trash-2"
-                  @click="deleteOrganization()"
-                />
-                <Button
-                  :tooltip="__('Open Website')"
-                  icon="lucide-link"
-                  @click="openWebsite"
-                />
               </div>
             </div>
           </template>
@@ -113,6 +100,16 @@
           :docname="organization.doc.name"
           @reload="sections.reload"
           @beforeFieldChange="beforeFieldChange"
+        />
+      </div>
+      <div v-if="canDelete" class="shrink-0 border-t p-3">
+        <Button
+          :label="__('Delete')"
+          theme="red"
+          size="sm"
+          iconLeft="trash-2"
+          class="w-full"
+          @click="deleteOrganization()"
         />
       </div>
     </Resizer>
