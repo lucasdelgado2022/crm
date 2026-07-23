@@ -7,15 +7,12 @@
     ]"
   >
     <Tooltip v-if="avatars?.length == 1" :text="avatars[0].name">
-      <div class="flex items-center gap-2 text-base">
-        <Avatar
-          shape="circle"
-          :image="avatars[0].image"
-          :label="avatars[0].label"
-          :size="size"
-        />
-        <div class="truncate">{{ avatars[0].label }}</div>
-      </div>
+      <Avatar
+        shape="circle"
+        :image="avatars[0].image"
+        :label="avatars[0].label"
+        :size="size"
+      />
     </Tooltip>
     <Tooltip
       v-for="avatar in reverseAvatars"
