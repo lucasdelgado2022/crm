@@ -26,8 +26,11 @@
             <div class="text-base text-ink-gray-8 truncate">
               {{ attachment.file_name }}
             </div>
-            <div class="mb-1 text-sm text-ink-gray-5">
+            <div class="mb-1 truncate text-sm text-ink-gray-5">
               {{ convertSize(attachment.file_size) }}
+              <span v-if="attachment.owner">
+                · {{ ownerName(attachment.owner) }}</span
+              >
             </div>
           </div>
         </div>
@@ -124,6 +127,7 @@ import FilePdfIcon from '@/components/Icons/FilePdfIcon.vue'
 import FileWordIcon from '@/components/Icons/FileWordIcon.vue'
 import FileExcelIcon from '@/components/Icons/FileExcelIcon.vue'
 import { globalStore } from '@/stores/global'
+import { usersStore } from '@/stores/users'
 import { call, Dialog } from 'frappe-ui'
 import { ref } from 'vue'
 import TimelineTimestamp from '@/components/Activities/TimelineTimestamp.vue'
@@ -136,6 +140,12 @@ defineProps({
 const emit = defineEmits(['reload'])
 
 const { $dialog } = globalStore()
+const { getUser } = usersStore()
+
+function ownerName(owner) {
+  if (!owner) return ''
+  return getUser(owner)?.full_name || owner
+}
 
 const showPreview = ref(false)
 const previewFile = ref(null)
