@@ -102,12 +102,23 @@
             </button>
           </div>
 
-          <FormControl
-            class="w-40 shrink-0"
-            type="select"
-            :options="channelOptions"
-            v-model="form.channel"
-          />
+          <div class="flex shrink-0 items-center gap-1">
+            <button
+              v-for="ch in channelButtons"
+              :key="ch.value"
+              type="button"
+              :title="ch.label"
+              class="flex h-8 w-8 items-center justify-center rounded-md border transition"
+              :class="
+                form.channel === ch.value
+                  ? 'border-outline-gray-3 bg-surface-gray-3 text-ink-gray-9'
+                  : 'border-outline-gray-2 text-ink-gray-5 hover:bg-surface-gray-2'
+              "
+              @click="form.channel = ch.value"
+            >
+              <component :is="ch.icon" class="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <!-- Selector de contacto (cliente) o nombre libre (nosotros): fila completa -->
@@ -201,11 +212,11 @@ const props = defineProps({
   docname: { type: String, required: true },
 })
 
-const channelOptions = [
-  { label: __('Teléfono'), value: 'Telefono' },
-  { label: __('Mail'), value: 'Mail' },
-  { label: 'LinkedIn', value: 'LinkedIn' },
-  { label: __('En persona'), value: 'En persona' },
+const channelButtons = [
+  { label: __('Teléfono'), value: 'Telefono', icon: PhoneIcon },
+  { label: __('Mail'), value: 'Mail', icon: Email2Icon },
+  { label: 'LinkedIn', value: 'LinkedIn', icon: LinkedinIcon },
+  { label: __('En persona'), value: 'En persona', icon: PeopleIcon },
 ]
 
 function channelLabel(ch) {

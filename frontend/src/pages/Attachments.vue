@@ -1,8 +1,6 @@
 <template>
   <div class="flex h-full flex-col">
-    <header
-      class="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5"
-    >
+    <header class="border-b px-5 py-3.5">
       <div class="flex items-center gap-2 text-lg font-semibold text-ink-gray-9">
         <AttachmentIcon class="h-5 w-5" />
         {{ __('Attachments') }}
@@ -10,7 +8,7 @@
           filteredRows.length
         }}</Badge>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="mt-3 flex flex-wrap items-center gap-2">
         <FormControl
           class="w-40"
           type="select"
@@ -41,8 +39,32 @@
             </button>
           </template>
         </Link>
+        <Link
+          class="w-52"
+          doctype="CRM Product"
+          v-model="productFilter"
+          :placeholder="__('Producto')"
+        >
+          <template #target="{ togglePopover }">
+            <button
+              class="flex h-8 w-52 items-center justify-between gap-1 rounded border border-outline-gray-2 bg-surface-white px-2.5 text-base"
+              @click="togglePopover()"
+            >
+              <span
+                class="truncate"
+                :class="productFilter ? 'text-ink-gray-8' : 'text-ink-gray-4'"
+              >
+                {{ productFilter || __('Producto') }}
+              </span>
+              <FeatherIcon
+                name="chevron-down"
+                class="h-4 w-4 shrink-0 text-ink-gray-5"
+              />
+            </button>
+          </template>
+        </Link>
         <Button
-          v-if="formatFilter || orgFilter"
+          v-if="formatFilter || orgFilter || productFilter"
           variant="ghost"
           :label="__('Limpiar')"
           @click="clearFilters"
@@ -168,6 +190,7 @@ const { getUser } = usersStore()
 
 const formatFilter = ref('')
 const orgFilter = ref('')
+const productFilter = ref('')
 const showPreview = ref(false)
 const previewFile = ref(null)
 
@@ -204,7 +227,7 @@ const files = createListResource({
 const deals = createListResource({
   doctype: 'CRM Deal',
   cache: 'deals-for-attachments',
-  fields: ['name', 'organization', 'custom_numero_solaer'],
+  fields: ['name', 'organization', 'custom_numero_solaer', 'custom_producto'],
   pageLength: 99999,
   auto: true,
 })
@@ -240,6 +263,7 @@ const rows = computed(() =>
     return {
       ...f,
       orgLabel: deal?.organization || '',
+      productLabel: deal?.custom_producto || '',
       dealLabel: deal?.custom_numero_solaer || f.attached_to_name,
       formatLabel: formatLabel(f.file_type),
       _fmt: formatKey(f.file_type),
@@ -251,6 +275,8 @@ const filteredRows = computed(() =>
   rows.value.filter((r) => {
     if (formatFilter.value && r._fmt !== formatFilter.value) return false
     if (orgFilter.value && r.orgLabel !== orgFilter.value) return false
+    if (productFilter.value && r.productLabel !== productFilter.value)
+      return false
     return true
   }),
 )
@@ -289,5 +315,6 @@ function openInTab() {
 function clearFilters() {
   formatFilter.value = ''
   orgFilter.value = ''
+  productFilter.value = ''
 }
 </script>

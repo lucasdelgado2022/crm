@@ -65,9 +65,9 @@
     <Resizer side="right" class="flex flex-col justify-between border-l">
       <div
         class="flex h-[45px] cursor-copy items-center border-b px-5 py-2.5 text-lg-medium text-ink-gray-9"
-        @click="copyToClipboard(dealId)"
+        @click="copyToClipboard(doc.custom_numero_solaer || dealId)"
       >
-        {{ __(dealId) }}
+        {{ doc.custom_numero_solaer || __(dealId) }}
       </div>
       <div class="flex items-center justify-start gap-5 border-b p-5">
         <Tooltip :text="__('Organization Logo')">
