@@ -28,20 +28,20 @@
 
       <template #item-label="{ active, selected, option }">
         <slot name="item-label" v-bind="{ active, selected, option }">
-          <div v-if="option.description" class="flex flex-col gap-1">
+          <div
+            v-if="isColoredDoctype"
+            class="flex flex-1 items-center gap-2 truncate text-ink-gray-7"
+          >
+            <IndicatorIcon :class="getOptionColorClass(option.value)" />
+            <div class="truncate">{{ option.label }}</div>
+          </div>
+          <div v-else-if="option.description" class="flex flex-col gap-1">
             <div class="flex-1 font-semibold truncate text-ink-gray-7">
               {{ option.label }}
             </div>
             <div class="flex-1 text-sm truncate text-ink-gray-5">
               {{ option.description }}
             </div>
-          </div>
-          <div
-            v-else-if="isColoredDoctype"
-            class="flex flex-1 items-center gap-2 truncate text-ink-gray-7"
-          >
-            <IndicatorIcon :class="getOptionColorClass(option.value)" />
-            <div class="truncate">{{ option.label }}</div>
           </div>
           <div v-else class="flex-1 truncate text-ink-gray-7">
             {{ option.label }}

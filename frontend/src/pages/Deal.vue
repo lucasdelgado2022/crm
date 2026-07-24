@@ -777,6 +777,7 @@ async function loadContactRoles() {
   try {
     const rows = await call('frappe.client.get_list', {
       doctype: 'CRM Contacts',
+      parent: 'CRM Deal',
       filters: { parenttype: 'CRM Deal', parent: props.dealId },
       fields: ['name', 'contact', 'custom_rol'],
       limit_page_length: 0,
@@ -795,6 +796,7 @@ async function setContactRole(contact, rol) {
     if (!rowName) {
       const rows = await call('frappe.client.get_list', {
         doctype: 'CRM Contacts',
+        parent: 'CRM Deal',
         filters: { parenttype: 'CRM Deal', parent: props.dealId, contact },
         fields: ['name'],
         limit_page_length: 1,
