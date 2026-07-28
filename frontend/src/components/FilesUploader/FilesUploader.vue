@@ -48,20 +48,6 @@
         </div>
         <div class="flex gap-2">
           <Button
-            v-if="isAllPrivate && files.length"
-            variant="subtle"
-            :label="__('Set all as public')"
-            :disabled="fileUploadStarted"
-            @click="setAllPublic"
-          />
-          <Button
-            v-else-if="files.length"
-            variant="subtle"
-            :label="__('Set all as private')"
-            :disabled="fileUploadStarted"
-            @click="setAllPrivate"
-          />
-          <Button
             v-if="!filesUploaderArea?.showCamera"
             variant="solid"
             :label="__('Attach')"

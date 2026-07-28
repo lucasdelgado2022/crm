@@ -86,12 +86,6 @@
             <div class="mb-1">
               {{ convertSize(file.fileObj.size) }}
             </div>
-            <FormControl
-              v-model="file.private"
-              type="checkbox"
-              class="[&>label]:text-sm [&>label]:text-ink-gray-5"
-              :label="__('Private')"
-            />
             <ErrorMessage
               v-if="file.errorMessage"
               class="mt-2"
@@ -285,7 +279,7 @@ function addFiles(fileArray) {
         requestSucceeded: false,
         errorMessage: null,
         uploading: false,
-        private: !makeAttachmentsPublic.value,
+        private: false,
       }
     })
 
