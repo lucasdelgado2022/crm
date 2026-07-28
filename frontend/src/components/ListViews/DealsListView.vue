@@ -35,6 +35,13 @@
         >
           <HeartIcon class="h-4 w-4" />
         </Button>
+        <StatusHeaderFilter
+          v-else-if="column.key === 'status' && statusFilterOptions.length"
+          :label="column.label"
+          :options="statusFilterOptions"
+          :active="activeStatusFilter"
+          @select="(s) => emit('statusFilter', s)"
+        />
       </ListHeaderItem>
     </ListHeader>
     <ListRows
@@ -273,6 +280,7 @@
 import HeartIcon from '@/components/Icons/HeartIcon.vue'
 import MultipleAvatar from '@/components/MultipleAvatar.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
+import StatusHeaderFilter from '@/components/ListViews/StatusHeaderFilter.vue'
 import { productsStore } from '@/stores/products'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
@@ -319,6 +327,8 @@ const props = defineProps({
   rows: { type: Array, required: true },
   columns: { type: Array, required: true },
   columnTotals: { type: Object, default: () => ({}) },
+  statusFilterOptions: { type: Array, default: () => [] },
+  activeStatusFilter: { type: String, default: null },
   options: {
     type: Object,
     default: () => ({
@@ -399,6 +409,7 @@ const emit = defineEmits([
   'applyLikeFilter',
   'likeDoc',
   'selectionsChanged',
+  'statusFilter',
 ])
 
 const route = useRoute()

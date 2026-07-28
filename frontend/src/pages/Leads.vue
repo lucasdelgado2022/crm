@@ -28,38 +28,6 @@
       allowedViews: ['list', 'group_by', 'kanban'],
     }"
   />
-  <div
-    v-if="orderedStatusCounts.length"
-    class="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2 sm:px-5"
-  >
-    <button
-      class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
-      :class="
-        !activeStatus
-          ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
-          : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
-      "
-      @click="setStatusFilter(null)"
-    >
-      {{ __('Todos') }}
-      <span class="text-ink-gray-5">{{ totalStatusCount }}</span>
-    </button>
-    <button
-      v-for="s in orderedStatusCounts"
-      :key="s.status"
-      class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
-      :class="
-        activeStatus === s.status
-          ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
-          : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
-      "
-      @click="setStatusFilter(s.status)"
-    >
-      <IndicatorIcon :class="getLeadStatus(s.status)?.color" />
-      {{ s.status }}
-      <span class="text-ink-gray-5">{{ s.count }}</span>
-    </button>
-  </div>
   <KanbanView
     v-if="route.params.viewType == 'kanban'"
     v-model="leads"
@@ -277,12 +245,15 @@
     v-model:list="leads"
     :rows="rows"
     :columns="columns"
+    :status-filter-options="orderedStatusCounts"
+    :active-status-filter="activeStatus"
     :options="{
       showTooltip: false,
       resizeColumn: true,
       rowCount: leads.data.row_count,
       totalCount: leads.data.total_count,
     }"
+    @statusFilter="(s) => setStatusFilter(s)"
     @loadMore="() => loadMore++"
     @columnWidthUpdated="() => triggerResize++"
     @updatePageCount="(count) => (updatedPageCount = count)"
@@ -382,11 +353,13 @@ const statusCounts = createResource({
 })
 
 const orderedStatusCounts = computed(() =>
-  [...(statusCounts.data || [])].sort(
-    (a, b) =>
-      (getLeadStatus(a.status)?.position ?? 999) -
-      (getLeadStatus(b.status)?.position ?? 999),
-  ),
+  [...(statusCounts.data || [])]
+    .map((s) => ({ ...s, color: getLeadStatus(s.status)?.color }))
+    .sort(
+      (a, b) =>
+        (getLeadStatus(a.status)?.position ?? 999) -
+        (getLeadStatus(b.status)?.position ?? 999),
+    ),
 )
 
 const activeStatus = computed(() => leads.value?.params?.filters?.status || null)
