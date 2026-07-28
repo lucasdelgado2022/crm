@@ -38,7 +38,13 @@
       <input
         v-else
         ref="inputEl"
-        :type="editType === 'number' ? 'number' : 'text'"
+        :type="
+          editType === 'number'
+            ? 'number'
+            : editType === 'date'
+              ? 'date'
+              : 'text'
+        "
         class="h-7 w-full rounded border border-outline-gray-3 bg-surface-base px-2 text-base text-ink-gray-8 focus:border-outline-gray-4 focus:outline-none focus:ring-0"
         v-model="editValue"
         @keydown.enter.stop.prevent="save"
@@ -74,6 +80,7 @@ const EDITABLE = [
   'Currency',
   'Percent',
   'Check',
+  'Date',
 ]
 const BLOCKED_KEYS = [
   'name',
@@ -102,6 +109,7 @@ const editType = computed(() => {
   if (t === 'Link') return 'link'
   if (t === 'Check') return 'checkbox'
   if (['Int', 'Float', 'Currency', 'Percent'].includes(t)) return 'number'
+  if (t === 'Date') return 'date'
   return 'text'
 })
 

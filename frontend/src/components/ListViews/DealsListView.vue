@@ -69,6 +69,9 @@
           <div v-else-if="['territory', 'industry'].includes(column.key)">
             <IndicatorIcon v-if="item?.color" :class="item.color" />
           </div>
+          <div v-else-if="column.key === 'custom_producto' && getProductColor(item)">
+            <IndicatorIcon :class="getProductColor(item)" />
+          </div>
           <div v-else-if="column.key === 'organization'">
             <Avatar
               v-if="item.label"
@@ -251,6 +254,7 @@
 import HeartIcon from '@/components/Icons/HeartIcon.vue'
 import MultipleAvatar from '@/components/MultipleAvatar.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
+import { productsStore } from '@/stores/products'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
@@ -269,6 +273,14 @@ import {
   Tooltip,
 } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
+
+const { getProduct } = productsStore()
+
+function getProductColor(item) {
+  const name = item && typeof item === 'object' ? item.label || item.value : item
+  const p = name && getProduct(name)
+  return p && p.color ? p.colorClass : ''
+}
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
