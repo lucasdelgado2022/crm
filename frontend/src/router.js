@@ -114,6 +114,11 @@ const routes = [
     component: () => import('@/pages/Attachments.vue'),
   },
   {
+    path: '/oferta-comercial',
+    name: 'OfertaComercial',
+    component: () => import('@/pages/OfertaComercial.vue'),
+  },
+  {
     alias: '/call-logs',
     path: '/call-logs/view/:viewType?',
     name: 'Call Logs',

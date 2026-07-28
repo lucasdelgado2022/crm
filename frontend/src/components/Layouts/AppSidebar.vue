@@ -163,6 +163,7 @@
 <script setup>
 import BrushCleaningIcon from '~icons/lucide/brush-cleaning'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
+import LucidePackage from '~icons/lucide/package'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import SearchIcon from '@/components/Icons/SearchIcon.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
@@ -270,6 +271,11 @@ const links = [
     label: 'Software',
     icon: SoftwareIcon,
     to: 'Software',
+  },
+  {
+    label: 'Oferta Comercial',
+    icon: LucidePackage,
+    to: 'OfertaComercial',
   },
   {
     label: 'Notes',
