@@ -55,6 +55,48 @@
           :description="description"
         />
       </div>
+      <div class="border-t pt-6">
+        <h3 class="text-base-semibold text-ink-gray-8">
+          {{ __('Crear usuario sin email') }}
+        </h3>
+        <p class="text-p-sm text-ink-gray-6 mt-1">
+          {{
+            __(
+              'Crea un agente sin enviar invitación. Se le asigna un correo temporal (…@solaer.local); luego podés activar su correo real renombrando el usuario desde Usuarios.',
+            )
+          }}
+        </p>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <FormControl
+            v-model="localFirstName"
+            :label="__('Nombre')"
+            placeholder="Juan"
+          />
+          <FormControl
+            v-model="localLastName"
+            :label="__('Apellido')"
+            placeholder="Pérez"
+          />
+        </div>
+        <FormControl
+          v-model="localRole"
+          type="select"
+          class="mt-3"
+          :label="__('Rol')"
+          :options="roleOptions"
+        />
+        <Button
+          class="mt-4"
+          variant="solid"
+          :label="__('Crear usuario')"
+          :loading="createLocal.loading"
+          :disabled="!localFirstName.trim()"
+          @click="createLocal.submit()"
+        />
+        <div v-if="localCreatedMsg" class="text-xs text-ink-green-6 mt-2">
+          {{ localCreatedMsg }}
+        </div>
+      </div>
       <template v-if="pendingInvitations.data?.length && !invitees.length">
         <div class="flex flex-col gap-4">
           <div class="flex items-center justify-between text-base-semibold">
@@ -113,6 +155,35 @@ const { capture } = useTelemetry()
 const invitees = ref([])
 const role = ref('Sales User')
 const error = ref(null)
+
+// #46: crear usuario sin email/invitación
+const localFirstName = ref('')
+const localLastName = ref('')
+const localRole = ref('Sales User')
+const localCreatedMsg = ref('')
+const createLocal = createResource({
+  url: 'crm.api.create_local_agent',
+  makeParams() {
+    return {
+      first_name: localFirstName.value,
+      last_name: localLastName.value,
+      role: localRole.value,
+    }
+  },
+  onSuccess(data) {
+    localCreatedMsg.value = __('Usuario creado: {0} ({1})', [
+      data.full_name,
+      data.email,
+    ])
+    toast.success(__('Usuario creado sin email'))
+    localFirstName.value = ''
+    localLastName.value = ''
+    localRole.value = 'Sales User'
+  },
+  onError(err) {
+    toast.error(err?.messages?.[0] || __('No se pudo crear el usuario'))
+  },
+})
 
 const userExistMessage = computed(() => {
   const inviteesSet = new Set(invitees.value)

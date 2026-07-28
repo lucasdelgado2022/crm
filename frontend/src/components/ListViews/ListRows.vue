@@ -21,6 +21,7 @@
           :key="row.name"
           v-slot="{ idx, column, item }"
           :row="row"
+          :style="rowStyle ? rowStyle(row) : null"
         >
           <slot v-bind="{ idx, column, item, row }" />
         </ListRow>
@@ -38,6 +39,7 @@
       :key="row.name"
       v-slot="{ idx, column, item }"
       :row="row"
+      :style="rowStyle ? rowStyle(row) : null"
     >
       <slot v-bind="{ idx, column, item, row }" />
     </ListRow>
@@ -52,6 +54,7 @@ import { ref, computed, watch, onBeforeUnmount, onMounted } from 'vue'
 const props = defineProps({
   rows: { type: Array, required: true },
   doctype: { type: String, default: 'CRM Lead' },
+  rowStyle: { type: Function, default: null },
 })
 
 const reactivieRows = ref(props.rows)

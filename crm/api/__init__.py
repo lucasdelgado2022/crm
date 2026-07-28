@@ -166,3 +166,52 @@ def get_file_uploader_defaults(doctype: str):
 		"max_number_of_files": max_number_of_files,
 		"make_attachments_public": bool(make_attachments_public),
 	}
+
+
+@frappe.whitelist()
+def create_local_agent(first_name, last_name=None, role="Sales User"):
+	"""#46: crea un usuario/agente SIN enviar email ni invitacion, con un correo
+	placeholder <slug>@solaer.local. Se activa luego renombrando el User al correo real."""
+	frappe.only_for(["Sales Manager", "System Manager"], True)
+
+	user_roles = frappe.get_roles(frappe.session.user)
+	if role not in ["Sales User", "Sales Manager", "System Manager"]:
+		frappe.throw(_("Rol no permitido"))
+	if role in ["System Manager", "Sales Manager"] and "System Manager" not in user_roles:
+		frappe.throw(_("No estas autorizado a crear usuarios con ese rol"), frappe.PermissionError)
+	if not first_name or not first_name.strip():
+		frappe.throw(_("El nombre es obligatorio"))
+
+	last = (last_name or "").strip()
+	base = frappe.scrub((first_name + " " + last)).strip("_") or "agente"
+	email = base + "@solaer.local"
+	i = 1
+	while frappe.db.exists("User", email):
+		i += 1
+		email = base + str(i) + "@solaer.local"
+
+	user = frappe.get_doc(
+		doctype="User",
+		user_type="System User",
+		email=email,
+		first_name=first_name.strip(),
+		last_name=last,
+		send_welcome_email=0,
+		enabled=1,
+	).insert(ignore_permissions=True)
+
+	user.append_roles(role)
+	if role == "System Manager":
+		user.append_roles("Sales Manager", "Sales User")
+	elif role == "Sales Manager":
+		user.append_roles("Sales User")
+
+	if role == "Sales User":
+		block_modules = frappe.get_all(
+			"Module Def", fields=["name as module"], filters={"name": ["!=", "FCRM"]}
+		)
+		if block_modules:
+			user.set("block_modules", block_modules)
+
+	user.save(ignore_permissions=True)
+	return {"email": email, "full_name": user.full_name, "role": role}
