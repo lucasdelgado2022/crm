@@ -9,6 +9,13 @@
     <div class="flex-1 overflow-y-auto">
       <div class="flex flex-col">
         <SidebarLink
+          :label="__('Buscar')"
+          :icon="SearchIcon"
+          :isCollapsed="isSidebarCollapsed"
+          class="mx-2 my-[1.5px]"
+          @click="showSearch = true"
+        />
+        <SidebarLink
           id="notifications-btn"
           :label="__('Notifications')"
           :icon="NotificationsIcon"
@@ -149,6 +156,7 @@
       v-model="showIntermediateModal"
       :currentStep="currentStep"
     />
+    <GlobalSearch v-model="showSearch" />
   </div>
 </template>
 
@@ -156,6 +164,8 @@
 import BrushCleaningIcon from '~icons/lucide/brush-cleaning'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
+import SearchIcon from '@/components/Icons/SearchIcon.vue'
+import GlobalSearch from '@/components/GlobalSearch.vue'
 import InviteIcon from '@/components/Icons/InviteIcon.vue'
 import ConvertIcon from '@/components/Icons/ConvertIcon.vue'
 import CommentIcon from '@/components/Icons/CommentIcon.vue'
@@ -220,6 +230,15 @@ const isSidebarCollapsed = useStorage('isSidebarCollapsed', false)
 const isFCSite = ref(window.is_fc_site)
 const isDemoSite = ref(window.is_demo_site)
 const showSalesHierarchyBanner = ref(!!window.show_sales_hierarchy_banner)
+
+const showSearch = ref(false)
+function onSearchKeydown(e) {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault()
+    showSearch.value = true
+  }
+}
+onMounted(() => window.addEventListener('keydown', onSearchKeydown))
 
 const links = [
   {
