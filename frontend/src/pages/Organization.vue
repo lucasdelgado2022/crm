@@ -771,30 +771,14 @@ const SoftwareIcon = {
   render: () => h(FeatherIcon, { name: 'monitor', class: 'h-5 w-5' }),
 }
 
-const deals = createListResource({
-  type: 'list',
-  doctype: 'CRM Deal',
-  cache: ['deals', props.organizationId],
-  fields: [
-    'name',
-    'organization',
-    'currency',
-    'annual_revenue',
-    'status',
-    'email',
-    'mobile_no',
-    'deal_owner',
-    'custom_numero_solaer',
-    'custom_titulo',
-    'custom_producto',
-    'contact',
-    'modified',
-  ],
-  filters: {
+// #47: todos los deals de la organizacion, visibles (solo lectura) para cualquier
+// usuario del CRM (evita el filtro de jerarquia solo en este widget).
+const deals = createResource({
+  url: 'crm.api.doc.get_organization_deals',
+  params: {
     organization: props.organizationId,
   },
-  orderBy: 'modified desc',
-  pageLength: 20,
+  cache: ['org-deals', props.organizationId],
   auto: true,
 })
 

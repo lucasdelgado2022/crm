@@ -838,3 +838,34 @@ def delete_bulk_docs(doctype: str, items: str | list, delete_linked: bool = Fals
 	else:
 		delete_bulk(doctype, items)
 	return "success"
+
+
+@frappe.whitelist()
+def get_organization_deals(organization, limit_page_length=50):
+	"""Deals de una organizacion visibles (solo lectura) para cualquier usuario del CRM.
+	Evita el filtro de jerarquia comercial (ignore_permissions) pero solo para el
+	widget de la Organizacion. La edicion sigue restringida por has_deal_permission."""
+	if not organization:
+		return []
+	return frappe.get_all(
+		"CRM Deal",
+		filters={"organization": organization},
+		fields=[
+			"name",
+			"organization",
+			"currency",
+			"annual_revenue",
+			"status",
+			"email",
+			"mobile_no",
+			"deal_owner",
+			"custom_numero_solaer",
+			"custom_titulo",
+			"custom_producto",
+			"contact",
+			"modified",
+		],
+		order_by="modified desc",
+		limit_page_length=int(limit_page_length or 50),
+		ignore_permissions=True,
+	)
