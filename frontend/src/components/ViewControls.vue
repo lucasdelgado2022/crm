@@ -1348,6 +1348,7 @@ function likeDoc({ name, liked }) {
 
 defineExpose({
   applyFilter,
+  updateFilter,
   applyLikeFilter,
   likeDoc,
   updateKanbanSettings,
