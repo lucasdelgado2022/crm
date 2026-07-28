@@ -65,6 +65,7 @@ import { usersStore } from '@/stores/users'
 import { useDocument } from '@/data/document'
 import { isMobileView } from '@/composables/settings'
 import { ref, watch, getCurrentInstance } from 'vue'
+import { watchDebounced } from '@vueuse/core'
 
 const props = defineProps({
   doctype: { type: String, required: true },
@@ -127,5 +128,14 @@ watch(
     }
   },
   { deep: true },
+)
+
+// Autosave: guarda solo (debounced) al editar los campos del tab Data
+watchDebounced(
+  () => document.doc,
+  () => {
+    if (document.isDirty && !document.save.loading) saveChanges()
+  },
+  { deep: true, debounce: 800 },
 )
 </script>
