@@ -10,7 +10,22 @@
     :whatsappBox="whatsappBox"
     :modalRef="modalRef"
   />
-  <FadedScrollableDiv class="flex flex-col h-full overflow-y-auto">
+  <FadedScrollableDiv
+    class="flex flex-col h-full overflow-y-auto relative"
+    @dragenter="onDragEnter"
+    @dragover.prevent="onDragOver"
+    @dragleave="onDragLeave"
+    @drop.prevent="onDrop"
+  >
+    <div
+      v-if="isDragging && title === 'Attachments'"
+      class="pointer-events-none absolute inset-2 z-20 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-outline-gray-3 bg-surface-gray-2/90 text-ink-gray-7"
+    >
+      <AttachmentIcon class="h-7 w-7" />
+      <span class="text-base font-medium">{{
+        __('Soltá los archivos para adjuntarlos')
+      }}</span>
+    </div>
     <div
       v-if="all_activities?.loading"
       class="flex flex-1 flex-col items-center justify-center gap-3 text-2xl-medium text-ink-gray-4"
@@ -534,6 +549,61 @@ const changeTabTo = (tabName) => {
   const index = tabNames?.indexOf(tabName)
   if (index == -1) return
   tabIndex.value = index
+}
+
+// Drag & drop de archivos en la pestaña Attachments
+const isDragging = ref(false)
+let dragCounter = 0
+function onDragEnter(e) {
+  if (title.value !== 'Attachments') return
+  if (!e.dataTransfer?.types?.includes('Files')) return
+  dragCounter++
+  isDragging.value = true
+}
+function onDragOver(e) {
+  if (title.value !== 'Attachments') return
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+}
+function onDragLeave() {
+  if (title.value !== 'Attachments') return
+  dragCounter = Math.max(0, dragCounter - 1)
+  if (dragCounter === 0) isDragging.value = false
+}
+async function onDrop(e) {
+  dragCounter = 0
+  isDragging.value = false
+  if (title.value !== 'Attachments') return
+  const files = Array.from(e.dataTransfer?.files || [])
+  if (!files.length) return
+  let ok = 0
+  for (const file of files) {
+    const fd = new FormData()
+    fd.append('file', file, file.name)
+    fd.append('is_private', '0')
+    fd.append('folder', 'Home/Attachments')
+    fd.append('doctype', props.doctype)
+    fd.append('docname', props.docname)
+    try {
+      const res = await fetch('/api/method/upload_file', {
+        method: 'POST',
+        headers: { 'X-Frappe-CSRF-Token': window.csrf_token },
+        body: fd,
+      })
+      if (!res.ok) throw new Error(await res.text())
+      ok++
+    } catch (err) {
+      toast.error(__('No se pudo subir') + ': ' + file.name)
+    }
+  }
+  if (ok) {
+    all_activities.reload()
+    changeTabTo('attachments')
+    toast.success(
+      ok === 1
+        ? __('Archivo adjuntado')
+        : __('{0} archivos adjuntados', [ok]),
+    )
+  }
 }
 
 const all_activities = createResource({

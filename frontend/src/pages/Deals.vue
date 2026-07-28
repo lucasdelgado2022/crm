@@ -44,7 +44,7 @@
       <span class="text-ink-gray-5">{{ totalStatusCount }}</span>
     </button>
     <button
-      v-for="s in statusCounts.data"
+      v-for="s in orderedStatusCounts"
       :key="s.status"
       class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
       :class="
@@ -350,6 +350,14 @@ const statusCounts = createResource({
   },
   auto: true,
 })
+
+const orderedStatusCounts = computed(() =>
+  [...(statusCounts.data || [])].sort(
+    (a, b) =>
+      (getDealStatus(a.status)?.position ?? 999) -
+      (getDealStatus(b.status)?.position ?? 999),
+  ),
+)
 
 const activeStatus = computed(() => deals.value?.params?.filters?.status || null)
 const totalStatusCount = computed(() =>

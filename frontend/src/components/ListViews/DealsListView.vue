@@ -46,22 +46,29 @@
         <template #prefix>
           <div
             v-if="column.key === '_assign'"
-            class="flex items-center truncate"
+            class="flex items-center -space-x-1.5 truncate"
           >
-            <MultipleAvatar
-              :avatars="item"
-              size="sm"
-              @click="
-                (event) =>
-                  emit('applyFilter', {
-                    event,
-                    idx,
-                    column,
-                    item,
-                    firstColumn: columns[0],
-                  })
-              "
-            />
+            <Tooltip
+              v-if="ownerMap[row.name] || row.deal_owner"
+              :text="__('Responsable') + ': ' + userLabel(ownerMap[row.name] || row.deal_owner)"
+            >
+              <div class="rounded-full ring-2 ring-blue-500">
+                <Avatar
+                  :image="userImage(ownerMap[row.name] || row.deal_owner)"
+                  :label="userLabel(ownerMap[row.name] || row.deal_owner)"
+                  size="sm"
+                />
+              </div>
+            </Tooltip>
+            <Tooltip
+              v-for="u in apoyoMap[row.name] || []"
+              :key="u"
+              :text="__('Apoyo') + ': ' + userLabel(u)"
+            >
+              <div class="rounded-full ring-2 ring-sky-300">
+                <Avatar :image="userImage(u)" :label="userLabel(u)" size="sm" />
+              </div>
+            </Tooltip>
           </div>
           <div v-else-if="column.key === 'status'">
             <IndicatorIcon :class="item.color" />
@@ -283,10 +290,22 @@ import {
   ListFooter,
   Dropdown,
   Tooltip,
+  call,
 } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
+import { usersStore } from '@/stores/users'
 
 const { getProduct } = productsStore()
+const { getUser } = usersStore()
+
+function userLabel(u) {
+  if (!u) return ''
+  return getUser(u)?.full_name || u
+}
+function userImage(u) {
+  if (!u) return ''
+  return getUser(u)?.user_image || ''
+}
 
 function getProductColor(item) {
   const name = item && typeof item === 'object' ? item.label || item.value : item
@@ -311,6 +330,52 @@ const props = defineProps({
     }),
   },
 })
+
+// Equipo comercial por deal: Responsable (deal_owner) + Apoyo (custom_apoyo_comercial)
+const apoyoMap = ref({})
+const ownerMap = ref({})
+async function loadTeam() {
+  const names = (props.rows || []).map((r) => r.name).filter(Boolean)
+  if (!names.length) {
+    apoyoMap.value = {}
+    ownerMap.value = {}
+    return
+  }
+  try {
+    const [apoyo, deals] = await Promise.all([
+      call('frappe.client.get_list', {
+        doctype: 'Apoyo Comercial User',
+        parent: 'CRM Deal',
+        filters: {
+          parenttype: 'CRM Deal',
+          parentfield: 'custom_apoyo_comercial',
+          parent: ['in', names],
+        },
+        fields: ['parent', 'user'],
+        limit_page_length: 0,
+      }),
+      call('frappe.client.get_list', {
+        doctype: 'CRM Deal',
+        filters: { name: ['in', names] },
+        fields: ['name', 'deal_owner'],
+        limit_page_length: 0,
+      }),
+    ])
+    const am = {}
+    for (const r of apoyo || []) (am[r.parent] ||= []).push(r.user)
+    apoyoMap.value = am
+    const om = {}
+    for (const r of deals || []) om[r.name] = r.deal_owner
+    ownerMap.value = om
+  } catch (e) {
+    // silencioso: si falla, el cell queda vacío
+  }
+}
+watch(
+  () => (props.rows || []).map((r) => r.name).join(','),
+  loadTeam,
+  { immediate: true },
+)
 
 const hasTotals = computed(
   () => Object.keys(props.columnTotals || {}).length > 0,

@@ -28,6 +28,38 @@
       allowedViews: ['list', 'group_by', 'kanban'],
     }"
   />
+  <div
+    v-if="orderedStatusCounts.length"
+    class="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2 sm:px-5"
+  >
+    <button
+      class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+      :class="
+        !activeStatus
+          ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+          : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+      "
+      @click="setStatusFilter(null)"
+    >
+      {{ __('Todos') }}
+      <span class="text-ink-gray-5">{{ totalStatusCount }}</span>
+    </button>
+    <button
+      v-for="s in orderedStatusCounts"
+      :key="s.status"
+      class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+      :class="
+        activeStatus === s.status
+          ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+          : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+      "
+      @click="setStatusFilter(s.status)"
+    >
+      <IndicatorIcon :class="getLeadStatus(s.status)?.color" />
+      {{ s.status }}
+      <span class="text-ink-gray-5">{{ s.count }}</span>
+    </button>
+  </div>
   <KanbanView
     v-if="route.params.viewType == 'kanban'"
     v-model="leads"
@@ -302,7 +334,7 @@ import { useBroadcast } from '@/composables/useBroadcast'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
 import { timestampCell } from '@/composables/useTimelinePreferences'
 import { useOnboarding, useTelemetry } from 'frappe-ui/frappe'
-import { Avatar, Tooltip, Dropdown } from 'frappe-ui'
+import { Avatar, Tooltip, Dropdown, createResource } from 'frappe-ui'
 import { useRoute } from 'vue-router'
 import { ref, computed, reactive, h } from 'vue'
 
@@ -335,6 +367,39 @@ const loadMore = ref(1)
 const triggerResize = ref(1)
 const updatedPageCount = ref(20)
 const viewControls = ref(null)
+
+const statusCounts = createResource({
+  url: 'frappe.client.get_list',
+  params: {
+    doctype: 'CRM Lead',
+    filters: { converted: 0 },
+    fields: ['status', 'count(name) as count'],
+    group_by: 'status',
+    order_by: 'count desc',
+    limit_page_length: 0,
+  },
+  auto: true,
+})
+
+const orderedStatusCounts = computed(() =>
+  [...(statusCounts.data || [])].sort(
+    (a, b) =>
+      (getLeadStatus(a.status)?.position ?? 999) -
+      (getLeadStatus(b.status)?.position ?? 999),
+  ),
+)
+
+const activeStatus = computed(() => leads.value?.params?.filters?.status || null)
+const totalStatusCount = computed(() =>
+  (statusCounts.data || []).reduce((a, s) => a + (s.count || 0), 0),
+)
+
+function setStatusFilter(status) {
+  const f = { ...(leads.value?.params?.filters || {}) }
+  if (status) f.status = status
+  else delete f.status
+  viewControls.value?.updateFilter(f)
+}
 
 function getRow(name, field) {
   function getValue(value) {

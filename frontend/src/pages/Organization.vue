@@ -244,6 +244,93 @@
         </div>
       </div>
 
+      <!-- Widget: Leads -->
+      <div
+        :class="
+          widgetShown('Leads')
+            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
+            : 'flex shrink-0 flex-col rounded-lg border'
+        "
+      >
+        <div class="flex shrink-0 items-center gap-3 border-b px-4 py-3">
+          <div
+            class="flex shrink-0 items-center gap-2 text-base font-semibold text-ink-gray-8"
+          >
+            <LeadsIcon class="h-5" />
+            {{ __('Leads') }}
+            <Badge variant="subtle" theme="gray" size="sm">
+              {{ leadRows.length }}
+            </Badge>
+          </div>
+          <div
+            v-if="leadStatusCounts.length && widgetShown('Leads')"
+            class="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+          >
+            <button
+              class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+              :class="
+                leadStatusFilter === null
+                  ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+                  : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+              "
+              @click="leadStatusFilter = null"
+            >
+              {{ __('Todos') }}
+              <span class="text-ink-gray-5">{{ leads.data?.length || 0 }}</span>
+            </button>
+            <button
+              v-for="s in leadStatusCounts"
+              :key="s.status"
+              class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+              :class="
+                leadStatusFilter === s.status
+                  ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+                  : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+              "
+              @click="
+                leadStatusFilter = leadStatusFilter === s.status ? null : s.status
+              "
+            >
+              <IndicatorIcon :class="s.color" />
+              {{ s.status }}
+              <span class="text-ink-gray-5">{{ s.count }}</span>
+            </button>
+          </div>
+          <div
+            class="flex shrink-0 gap-2"
+            :class="{
+              'ml-auto': !(leadStatusCounts.length && widgetShown('Leads')),
+            }"
+          >
+            <Button
+              variant="ghost"
+              :tooltip="maxWidget === 'Leads' ? __('Restaurar') : __('Maximizar')"
+              @click="toggleMax('Leads')"
+            >
+              <template #icon>
+                <component
+                  :is="maxWidget === 'Leads' ? MinimizeIcon : MaximizeIcon"
+                  class="h-4 w-4"
+                />
+              </template>
+            </Button>
+          </div>
+        </div>
+        <div
+          v-show="widgetShown('Leads')"
+          class="min-h-0 flex-1 overflow-y-auto"
+        >
+          <LeadsListView
+            v-if="leadRows.length"
+            class="py-2"
+            :rows="leadRows"
+            :columns="leadColumns"
+            :options="{ selectable: false, showTooltip: false }"
+          />
+          <EmptyState v-else :icon="LeadsIcon" :name="__('Leads')" />
+        </div>
+      </div>
+
       <!-- Widget: Contacts -->
       <div
         :class="
@@ -475,10 +562,12 @@ import SidePanelLayout from '@/components/SidePanelLayout.vue'
 import Icon from '@/components/Icon.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'
+import LeadsListView from '@/components/ListViews/LeadsListView.vue'
 import ContactsListView from '@/components/ListViews/ContactsListView.vue'
 import WebsiteIcon from '@/components/Icons/WebsiteIcon.vue'
 import CameraIcon from '@/components/Icons/CameraIcon.vue'
 import DealsIcon from '@/components/Icons/DealsIcon.vue'
+import LeadsIcon from '@/components/Icons/LeadsIcon.vue'
 import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
@@ -529,7 +618,7 @@ const props = defineProps({
 const { brand } = getSettings()
 const { $dialog, $socket } = globalStore()
 const { getUser } = usersStore()
-const { getDealStatus } = statusesStore()
+const { getDealStatus, getLeadStatus } = statusesStore()
 const { doctypeMeta } = getMeta('CRM Organization')
 const { capture } = useTelemetry()
 
@@ -709,6 +798,30 @@ const deals = createListResource({
   auto: true,
 })
 
+const leads = createListResource({
+  type: 'list',
+  doctype: 'CRM Lead',
+  cache: ['leads', props.organizationId],
+  fields: [
+    'name',
+    'lead_name',
+    'first_name',
+    'last_name',
+    'organization',
+    'status',
+    'email',
+    'mobile_no',
+    'lead_owner',
+    'modified',
+  ],
+  filters: {
+    organization: props.organizationId,
+  },
+  orderBy: 'modified desc',
+  pageLength: 20,
+  auto: true,
+})
+
 const contacts = createListResource({
   type: 'list',
   doctype: 'Contact',
@@ -770,11 +883,14 @@ const dealStatusCounts = computed(() => {
     if (!d.status) continue
     counts[d.status] = (counts[d.status] || 0) + 1
   }
-  return Object.entries(counts).map(([status, count]) => ({
-    status,
-    count,
-    color: getDealStatus(status)?.color,
-  }))
+  return Object.entries(counts)
+    .map(([status, count]) => ({
+      status,
+      count,
+      color: getDealStatus(status)?.color,
+      position: getDealStatus(status)?.position ?? 999,
+    }))
+    .sort((a, b) => a.position - b.position)
 })
 
 const dealRows = computed(() => {
@@ -783,6 +899,31 @@ const dealRows = computed(() => {
     data = data.filter((d) => d.status === dealStatusFilter.value)
   return data.map(getDealRowObject)
 })
+const leadStatusFilter = ref(null)
+
+const leadStatusCounts = computed(() => {
+  const counts = {}
+  for (const l of leads.data || []) {
+    if (!l.status) continue
+    counts[l.status] = (counts[l.status] || 0) + 1
+  }
+  return Object.entries(counts)
+    .map(([status, count]) => ({
+      status,
+      count,
+      color: getLeadStatus(status)?.color,
+      position: getLeadStatus(status)?.position ?? 999,
+    }))
+    .sort((a, b) => a.position - b.position)
+})
+
+const leadRows = computed(() => {
+  let data = leads.data || []
+  if (leadStatusFilter.value)
+    data = data.filter((l) => l.status === leadStatusFilter.value)
+  return data.map(getLeadRowObject)
+})
+
 const contactRolFilter = ref(null)
 
 const contactRolCounts = computed(() => {
@@ -900,6 +1041,63 @@ function getDealRowObject(deal) {
     modified: timestampCell(deal.modified),
   }
 }
+
+function getLeadRowObject(lead) {
+  return {
+    name: lead.name,
+    lead_name:
+      lead.lead_name ||
+      [lead.first_name, lead.last_name].filter(Boolean).join(' '),
+    organization: {
+      label: lead.organization,
+      logo: organization.doc?.organization_logo,
+    },
+    status: {
+      label: lead.status,
+      color: getLeadStatus(lead.status)?.color,
+    },
+    email: lead.email,
+    mobile_no: lead.mobile_no,
+    lead_owner: {
+      label: lead.lead_owner && getUser(lead.lead_owner).full_name,
+      ...(lead.lead_owner && getUser(lead.lead_owner)),
+    },
+    modified: timestampCell(lead.modified),
+  }
+}
+
+const leadColumns = [
+  {
+    label: __('Nombre'),
+    key: 'lead_name',
+    width: '12rem',
+  },
+  {
+    label: __('Organización'),
+    key: 'organization',
+    width: '12rem',
+  },
+  {
+    label: __('Status'),
+    key: 'status',
+    width: '11rem',
+  },
+  {
+    label: __('Email'),
+    key: 'email',
+    width: '12rem',
+  },
+  {
+    label: __('Teléfono'),
+    key: 'mobile_no',
+    width: '11rem',
+  },
+  {
+    label: __('Responsable'),
+    key: 'lead_owner',
+    width: '11rem',
+  },
+]
 
 function getContactRowObject(contact) {
   return {

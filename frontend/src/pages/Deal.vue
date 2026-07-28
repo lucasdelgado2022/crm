@@ -114,6 +114,13 @@
             />
 
             <Button
+              v-if="doc.organization"
+              :tooltip="__('Editar organización')"
+              icon="lucide-pencil"
+              @click="openOrganization"
+            />
+
+            <Button
               :tooltip="__('Go to Website')"
               :icon="LinkIcon"
               @click="
