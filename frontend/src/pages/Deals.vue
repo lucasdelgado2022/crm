@@ -381,6 +381,16 @@ const columns = computed(() => {
       }
       return col
     })
+    _columns = [
+      ..._columns,
+      {
+        label: __('Antigüedad'),
+        key: '_age',
+        type: 'Age',
+        width: '7rem',
+        align: 'right',
+      },
+    ]
   }
 
   return _columns

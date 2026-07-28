@@ -177,6 +177,12 @@
             />
           </div>
           <div
+            v-else-if="column.key === '_age'"
+            class="truncate text-base text-ink-gray-7"
+          >
+            {{ ageLabel(row.name) }}
+          </div>
+          <div
             v-else-if="column.key === 'custom_solaer_revenue'"
             class="truncate text-base"
           >
@@ -344,11 +350,27 @@ const props = defineProps({
 // Equipo comercial por deal: Responsable (deal_owner) + Apoyo (custom_apoyo_comercial)
 const apoyoMap = ref({})
 const ownerMap = ref({})
+const ageMap = ref({})
+
+function daysSince(dt) {
+  if (!dt) return null
+  const created = new Date(String(dt).replace(' ', 'T'))
+  if (isNaN(created)) return null
+  const d = Math.floor((Date.now() - created.getTime()) / 86400000)
+  return d < 0 ? 0 : d
+}
+function ageLabel(name) {
+  const d = ageMap.value[name]
+  if (d == null) return ''
+  return d === 1 ? '1 día' : `${d} días`
+}
+
 async function loadTeam() {
   const names = (props.rows || []).map((r) => r.name).filter(Boolean)
   if (!names.length) {
     apoyoMap.value = {}
     ownerMap.value = {}
+    ageMap.value = {}
     return
   }
   try {
@@ -367,7 +389,7 @@ async function loadTeam() {
       call('frappe.client.get_list', {
         doctype: 'CRM Deal',
         filters: { name: ['in', names] },
-        fields: ['name', 'deal_owner'],
+        fields: ['name', 'deal_owner', 'creation'],
         limit_page_length: 0,
       }),
     ])
@@ -375,8 +397,13 @@ async function loadTeam() {
     for (const r of apoyo || []) (am[r.parent] ||= []).push(r.user)
     apoyoMap.value = am
     const om = {}
-    for (const r of deals || []) om[r.name] = r.deal_owner
+    const gm = {}
+    for (const r of deals || []) {
+      om[r.name] = r.deal_owner
+      gm[r.name] = daysSince(r.creation)
+    }
     ownerMap.value = om
+    ageMap.value = gm
   } catch (e) {
     // silencioso: si falla, el cell queda vacío
   }

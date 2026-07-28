@@ -132,6 +132,12 @@
               <div>{{ item.timeAgo }}</div>
             </Tooltip>
           </div>
+          <div
+            v-else-if="column.key === '_age'"
+            class="truncate text-base text-ink-gray-7"
+          >
+            {{ ageLabel(row.name) }}
+          </div>
           <div v-else-if="column.key === '_liked_by'">
             <Button
               v-if="column.key == '_liked_by'"
@@ -259,12 +265,47 @@ import {
   ListFooter,
   Dropdown,
   Tooltip,
+  call,
 } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-defineProps({
+const ageMap = ref({})
+function daysSince(dt) {
+  if (!dt) return null
+  const created = new Date(String(dt).replace(' ', 'T'))
+  if (isNaN(created)) return null
+  const d = Math.floor((Date.now() - created.getTime()) / 86400000)
+  return d < 0 ? 0 : d
+}
+function ageLabel(name) {
+  const d = ageMap.value[name]
+  if (d == null) return ''
+  return d === 1 ? '1 día' : `${d} días`
+}
+async function loadAges(rows) {
+  const names = (rows || []).map((r) => r.name).filter(Boolean)
+  if (!names.length) {
+    ageMap.value = {}
+    return
+  }
+  try {
+    const leads = await call('frappe.client.get_list', {
+      doctype: 'CRM Lead',
+      filters: { name: ['in', names] },
+      fields: ['name', 'creation'],
+      limit_page_length: 0,
+    })
+    const gm = {}
+    for (const r of leads || []) gm[r.name] = daysSince(r.creation)
+    ageMap.value = gm
+  } catch (e) {
+    // silencioso
+  }
+}
+
+const props = defineProps({
   rows: { type: Array, required: true },
   columns: { type: Array, required: true },
   statusFilterOptions: { type: Array, default: () => [] },
@@ -290,6 +331,12 @@ const emit = defineEmits([
   'selectionsChanged',
   'statusFilter',
 ])
+
+watch(
+  () => (props.rows || []).map((r) => r.name).join(','),
+  () => loadAges(props.rows),
+  { immediate: true },
+)
 
 const route = useRoute()
 
