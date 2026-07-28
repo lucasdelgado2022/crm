@@ -43,25 +43,42 @@
     </template>
   </LayoutHeader>
   <div v-if="doc.name" class="flex h-full overflow-hidden">
-    <Tabs
-      v-model="tabIndex"
-      as="div"
-      :tabs="tabs"
-      class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
-    >
-      <template #tab-panel>
-        <Activities
-          ref="activities"
-          v-model:reload="reload"
-          v-model:tabIndex="tabIndex"
-          doctype="CRM Deal"
-          :docname="dealId"
-          :tabs="tabs"
-          @beforeSave="beforeStatusChange"
-          @afterSave="reloadResources"
-        />
-      </template>
-    </Tabs>
+    <div class="relative flex flex-1 flex-col overflow-hidden">
+      <Tabs
+        v-model="tabIndex"
+        as="div"
+        :tabs="tabs"
+        class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow [&_[role='tab']:nth-child(n+7)]:!hidden"
+      >
+        <template #tab-panel>
+          <Activities
+            ref="activities"
+            v-model:reload="reload"
+            v-model:tabIndex="tabIndex"
+            doctype="CRM Deal"
+            :docname="dealId"
+            :tabs="tabs"
+            @beforeSave="beforeStatusChange"
+            @afterSave="reloadResources"
+          />
+        </template>
+      </Tabs>
+      <div
+        v-if="moreTabs.length"
+        class="absolute right-4 top-1.5 z-10"
+      >
+        <Dropdown :options="moreTabs" placement="bottom-end">
+          <template #default="{ open }">
+            <Button
+              variant="ghost"
+              :label="activeSecondaryLabel || __('Más')"
+              :iconRight="open ? 'chevron-up' : 'chevron-down'"
+              :class="activeSecondaryLabel ? 'text-ink-gray-9' : 'text-ink-gray-6'"
+            />
+          </template>
+        </Dropdown>
+      </div>
+    </div>
     <Resizer side="right" class="flex flex-col justify-between border-l">
       <div
         class="flex h-[45px] cursor-copy items-center border-b px-5 py-2.5 text-lg-medium text-ink-gray-9"
@@ -597,6 +614,7 @@ usePageMeta(() => {
 })
 
 const tabs = computed(() => {
+  // Primarios (visibles) primero; secundarios van al desplegable "Más".
   let tabOptions = [
     {
       name: 'Data',
@@ -614,21 +632,6 @@ const tabs = computed(() => {
       icon: AttachmentIcon,
     },
     {
-      name: 'Tasks',
-      label: __('Tasks'),
-      icon: TaskIcon,
-    },
-    {
-      name: 'Activity',
-      label: __('Activity'),
-      icon: ActivityIcon,
-    },
-    {
-      name: 'Emails',
-      label: __('Emails'),
-      icon: EmailIcon,
-    },
-    {
       name: 'Comments',
       label: __('Comments'),
       icon: CommentIcon,
@@ -638,24 +641,64 @@ const tabs = computed(() => {
       label: __('Interacciones'),
       icon: PeopleIcon,
     },
+    // --- secundarios (agrupados en "Más") ---
+    {
+      name: 'Tasks',
+      label: __('Tasks'),
+      icon: TaskIcon,
+      secondary: true,
+    },
+    {
+      name: 'Activity',
+      label: __('Activity'),
+      icon: ActivityIcon,
+      secondary: true,
+    },
+    {
+      name: 'Emails',
+      label: __('Emails'),
+      icon: EmailIcon,
+      secondary: true,
+    },
     {
       name: 'Events',
       label: __('Events'),
       icon: EventIcon,
+      secondary: true,
     },
     {
       name: 'Calls',
       label: __('Calls'),
       icon: PhoneIcon,
+      secondary: true,
     },
     {
       name: 'WhatsApp',
       label: __('WhatsApp'),
       icon: WhatsAppIcon,
+      secondary: true,
       condition: () => whatsappEnabled.value,
     },
   ]
   return tabOptions.filter((tab) => (tab.condition ? tab.condition() : true))
+})
+
+// Opciones del desplegable "Más" (tabs secundarios)
+const moreTabs = computed(() =>
+  tabs.value
+    .map((t, i) => ({ ...t, index: i }))
+    .filter((t) => t.secondary)
+    .map((t) => ({
+      label: t.label,
+      icon: h(t.icon, { class: 'h-4 w-4' }),
+      onClick: () => (tabIndex.value = t.index),
+    })),
+)
+
+// Si el tab activo es secundario, mostrar su nombre en el botón "Más"
+const activeSecondaryLabel = computed(() => {
+  const t = tabs.value[tabIndex.value]
+  return t && t.secondary ? t.label : ''
 })
 
 const { tabIndex } = useActiveTabManager(tabs, 'lastDealTab')
