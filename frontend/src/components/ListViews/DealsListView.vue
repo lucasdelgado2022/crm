@@ -35,13 +35,6 @@
         >
           <HeartIcon class="h-4 w-4" />
         </Button>
-        <StatusHeaderFilter
-          v-else-if="column.key === 'status' && statusFilterOptions.length"
-          :label="column.label"
-          :options="statusFilterOptions"
-          :active="activeStatusFilter"
-          @select="(s) => emit('statusFilter', s)"
-        />
       </ListHeaderItem>
     </ListHeader>
     <ListRows
