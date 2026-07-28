@@ -162,6 +162,18 @@
               "
             />
           </div>
+          <div
+            v-else-if="column.key === 'custom_solaer_revenue'"
+            class="truncate text-base"
+          >
+            <span
+              v-if="item"
+              class="rounded px-2 py-0.5 text-sm font-medium"
+              style="background-color: #dbeafe; color: #1e3a8a"
+            >
+              {{ typeof item === 'object' ? item.label || item.value : item }}
+            </span>
+          </div>
           <div v-else-if="column.type === 'Check'">
             <FormControl
               type="checkbox"
