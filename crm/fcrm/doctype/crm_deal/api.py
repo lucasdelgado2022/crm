@@ -22,7 +22,7 @@ def get_deal_contacts(name: str):
 			"image": contact.image,
 			"full_name": contact.full_name,
 			"email": contact.email_id,
-			"mobile_no": contact.mobile_no,
+			"mobile_no": contact.mobile_no or contact.phone,
 			"is_primary": is_primary,
 		}
 		deal_contacts.append(_contact)
