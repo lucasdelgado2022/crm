@@ -1206,3 +1206,43 @@ def get_deal_status_change_counts(
 
 	result = query.run(as_dict=True)
 	return result or []
+
+
+def get_deals_funnel_by_stage(
+	from_date: str | None = None, to_date: str | None = None, user: str | None = None
+):
+	"""Embudo de deals por etapa, con TODAS las etapas (ongoing + Won) ordenadas
+	por orden de avance (CRM Deal Status.position). Excluye Lost."""
+	if not from_date or not to_date:
+		from_date = frappe.utils.get_first_day(from_date or frappe.utils.nowdate())
+		to_date = frappe.utils.get_last_day(to_date or frappe.utils.nowdate())
+
+	CRMDeal = DocType("CRM Deal")
+	CRMDealStatus = DocType("CRM Deal Status")
+
+	query = (
+		frappe.qb.from_(CRMDeal)
+		.join(CRMDealStatus)
+		.on(CRMDeal.status == CRMDealStatus.name)
+		.select(CRMDeal.status.as_("stage"), Count("*").as_("count"))
+		.where((Date(CRMDeal.creation).between(from_date, to_date)) & (CRMDealStatus.type.notin(["Lost"])))
+		.groupby(CRMDeal.status, CRMDealStatus.position)
+		.orderby(CRMDealStatus.position)
+	)
+
+	if user:
+		query = query.where(CRMDeal.deal_owner == user)
+
+	result = query.run(as_dict=True)
+
+	return {
+		"data": result or [],
+		"title": _("Embudo por etapa"),
+		"subtitle": _("Todas las etapas en orden de avance"),
+		"xAxis": {"title": _("Etapa"), "key": "stage", "type": "category"},
+		"yAxis": {"title": _("Count")},
+		"swapXY": True,
+		"series": [
+			{"name": "count", "type": "bar", "echartOptions": {"colorBy": "data"}},
+		],
+	}
