@@ -187,6 +187,11 @@
               <Link
                 value=""
                 doctype="Contact"
+                :filters="
+                  doc.organization
+                    ? { company_name: doc.organization }
+                    : undefined
+                "
                 :onCreate="
                   (value, close) => {
                     _contact = {
