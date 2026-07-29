@@ -23,192 +23,208 @@
   </LayoutHeader>
 
   <div class="flex h-full overflow-hidden">
-    <!-- Árbol de categorías -->
-    <div class="w-64 shrink-0 overflow-y-auto border-r p-2">
+    <!-- Menú lateral: categorías → grupos → subcategorías -->
+    <div class="w-72 shrink-0 overflow-y-auto border-r p-2 text-sm">
       <button
-        class="mb-1 flex w-full items-center justify-between rounded px-2 py-1.5 text-sm font-medium"
-        :class="
-          !selCat
-            ? 'bg-surface-gray-3 text-ink-gray-9'
-            : 'text-ink-gray-7 hover:bg-surface-gray-2'
-        "
-        @click="selectNode(null, null)"
+        class="mb-1 flex w-full items-center justify-between rounded px-2 py-1.5 font-medium"
+        :class="navClass(isAll)"
+        @click="selectAll()"
       >
         <span>{{ __('Todo el catálogo') }}</span>
         <span class="text-ink-gray-5">{{ products.length }}</span>
       </button>
+
       <div v-for="cat in taxonomy" :key="cat.cat" class="mb-0.5">
         <button
-          class="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm font-medium"
-          :class="
-            selCat === cat.cat && !selGroup
-              ? 'bg-surface-gray-3 text-ink-gray-9'
-              : 'text-ink-gray-8 hover:bg-surface-gray-2'
-          "
-          @click="toggleCat(cat)"
+          class="flex w-full items-center justify-between rounded px-2 py-1.5 text-left font-medium"
+          :class="navClass(sel.level === 'cat' && sel.cat === cat.cat)"
+          @click="selectCat(cat)"
         >
-          <span class="flex items-center gap-1.5">
+          <span class="flex items-center gap-1.5 truncate">
             <FeatherIcon
               v-if="cat.groups.length"
               :name="openCats[cat.cat] ? 'chevron-down' : 'chevron-right'"
               class="h-3.5 w-3.5 shrink-0 text-ink-gray-5"
+              @click.stop="openCats[cat.cat] = !openCats[cat.cat]"
             />
             <span class="truncate">{{ cat.cat }}</span>
           </span>
-          <span class="text-ink-gray-5">{{ countByCat(cat.cat) }}</span>
+          <span class="text-ink-gray-5">{{ countCat(cat.cat) }}</span>
         </button>
-        <div v-if="openCats[cat.cat] && cat.groups.length" class="ml-3 mt-0.5">
-          <button
-            v-for="g in cat.groups"
-            :key="g.name"
-            class="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm"
-            :class="
-              selCat === cat.cat && selGroup === g.name
-                ? 'bg-surface-gray-3 text-ink-gray-9'
-                : 'text-ink-gray-6 hover:bg-surface-gray-2'
-            "
-            @click="selectNode(cat.cat, g.name)"
-          >
-            <span class="truncate">{{ g.name || __('General') }}</span>
-            <span class="text-ink-gray-5">{{ countByGroup(cat.cat, g.name) }}</span>
-          </button>
+
+        <div v-if="openCats[cat.cat]" class="ml-3 mt-0.5">
+          <div v-for="g in cat.groups" :key="g.name" class="mb-0.5">
+            <button
+              class="flex w-full items-center justify-between rounded px-2 py-1 text-left"
+              :class="navClass(sel.level === 'group' && sel.key === g.name)"
+              @click="selectGroup(cat, g)"
+            >
+              <span class="flex items-center gap-1.5 truncate">
+                <FeatherIcon
+                  v-if="g.items.length"
+                  :name="openGroups[g.name] ? 'chevron-down' : 'chevron-right'"
+                  class="h-3 w-3 shrink-0 text-ink-gray-4"
+                  @click.stop="openGroups[g.name] = !openGroups[g.name]"
+                />
+                <span class="truncate">{{ g.name }}</span>
+              </span>
+              <span class="text-ink-gray-5">{{ countKey(g.name) }}</span>
+            </button>
+
+            <div v-if="openGroups[g.name]" class="ml-4 mt-0.5">
+              <button
+                v-for="leaf in g.items"
+                :key="leaf"
+                class="flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left text-xs"
+                :class="navClass(sel.level === 'leaf' && sel.key === leaf)"
+                @click="selectLeaf(cat, g, leaf)"
+              >
+                <span class="truncate">{{ leaf }}</span>
+                <span class="shrink-0 text-ink-gray-5">{{ countKey(leaf) }}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Panel principal -->
-    <div class="flex-1 overflow-y-auto p-4 sm:p-5">
-      <!-- Ofertas de la subcategoría seleccionada (del árbol, informativo) -->
-      <div v-if="currentGroupItems.length" class="mb-5">
-        <div class="mb-2 text-sm font-semibold text-ink-gray-7">
-          {{ __('Ofertas en') }} {{ selGroup }}
+    <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <!-- Barra: título del nodo + asignar -->
+      <div
+        class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5"
+      >
+        <div class="min-w-0">
+          <div class="truncate text-base font-semibold text-ink-gray-8">
+            {{ sel.title }}
+          </div>
+          <div class="text-xs text-ink-gray-5">
+            {{ filteredProducts.length }} {{ __('productos') }}
+          </div>
         </div>
-        <div class="flex flex-wrap gap-1.5">
-          <span
-            v-for="it in currentGroupItems"
-            :key="it"
-            class="rounded-full border border-outline-gray-2 bg-surface-gray-1 px-2.5 py-1 text-xs text-ink-gray-7"
-          >
-            {{ it }}
-          </span>
+        <div v-if="assignable" class="flex items-center gap-2">
+          <Link
+            class="w-56"
+            :value="pickValue"
+            doctype="CRM Product"
+            :placeholder="__('Asignar producto...')"
+            @change="(v) => onPick(v)"
+          />
         </div>
       </div>
 
-      <div
-        v-if="loading"
-        class="flex h-40 items-center justify-center text-ink-gray-4"
-      >
-        {{ __('Cargando...') }}
-      </div>
-      <div
-        v-else-if="!filteredProducts.length"
-        class="flex h-40 flex-col items-center justify-center gap-2 text-ink-gray-4"
-      >
-        <PackageIcon class="h-8 w-8" />
-        <span>{{ __('No hay productos en esta selección') }}</span>
-      </div>
-
-      <div
-        v-else
-        class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
-      >
+      <div class="flex-1 overflow-y-auto">
         <div
-          v-for="p in filteredProducts"
-          :key="p.name"
-          class="flex flex-col rounded-lg border border-outline-gray-2 bg-surface-base p-3 hover:border-outline-gray-3"
+          v-if="loading"
+          class="flex h-40 items-center justify-center text-ink-gray-4"
         >
-          <div class="flex items-start gap-3">
-            <div
-              class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded border bg-surface-gray-1"
-            >
-              <img
-                v-if="p.image"
-                :src="p.image"
-                :alt="p.product_name || p.name"
-                class="h-full w-full object-cover"
-              />
-              <IndicatorIcon v-else :class="colorClass(p.color)" class="h-4 w-4" />
-            </div>
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-1.5">
-                <IndicatorIcon
-                  v-if="p.image"
-                  :class="colorClass(p.color)"
-                  class="h-3 w-3 shrink-0"
-                />
-                <span class="truncate font-medium text-ink-gray-9">{{
-                  p.product_name || p.name
-                }}</span>
-              </div>
-              <div class="truncate text-xs text-ink-gray-5">
-                {{ p.product_code }}
-              </div>
-              <div
-                v-if="p.custom_subcategoria"
-                class="mt-0.5 inline-block rounded bg-surface-gray-2 px-1.5 py-0.5 text-xs text-ink-gray-6"
-              >
-                {{ p.custom_subcategoria }}
-              </div>
-            </div>
-            <span
-              v-if="p.disabled"
-              class="rounded bg-surface-gray-2 px-1.5 py-0.5 text-xs text-ink-gray-5"
-              >{{ __('Discontinuado') }}</span
-            >
-          </div>
-
-          <div
-            v-if="stripHtml(p.description)"
-            class="mt-2 line-clamp-2 text-sm text-ink-gray-6"
-          >
-            {{ stripHtml(p.description) }}
-          </div>
-
-          <!-- Info de ventas -->
-          <div
-            class="mt-3 grid grid-cols-3 gap-2 rounded-md bg-surface-gray-1 p-2 text-center"
-          >
-            <div>
-              <div class="text-sm font-semibold text-ink-gray-9">
-                {{ sales(p.name).count }}
-              </div>
-              <div class="text-xs text-ink-gray-5">{{ __('Oport.') }}</div>
-            </div>
-            <div>
-              <div class="text-sm font-semibold text-green-700">
-                {{ sales(p.name).won }}
-              </div>
-              <div class="text-xs text-ink-gray-5">{{ __('Ganadas') }}</div>
-            </div>
-            <div>
-              <div class="truncate text-sm font-semibold text-ink-gray-9">
-                {{ money(sales(p.name).revenue) }}
-              </div>
-              <div class="text-xs text-ink-gray-5">{{ __('Revenue') }}</div>
-            </div>
-          </div>
-
-          <div class="mt-2 flex items-center justify-between">
-            <span v-if="p.standard_rate" class="text-sm text-ink-gray-7">
-              {{ __('Precio') }}: {{ money(p.standard_rate) }}
-            </span>
-            <span v-else />
-            <span
-              v-if="p.erpnext_item_code"
-              class="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700"
-              :title="__('Vinculado al ERP')"
-            >
-              <FeatherIcon name="link" class="h-3 w-3" />
-              ERP: {{ p.erpnext_item_code }}
-            </span>
-            <span
-              v-else
-              class="text-xs text-ink-gray-4"
-              :title="__('Sin vincular al ERP')"
-              >{{ __('Sin ERP') }}</span
-            >
-          </div>
+          {{ __('Cargando...') }}
         </div>
+        <div
+          v-else-if="!filteredProducts.length"
+          class="flex h-40 flex-col items-center justify-center gap-2 text-ink-gray-4"
+        >
+          <PackageIcon class="h-8 w-8" />
+          <span>{{ __('Sin productos en esta selección') }}</span>
+          <span v-if="assignable" class="text-xs">{{
+            __('Usá "Asignar producto" para agregar')
+          }}</span>
+        </div>
+
+        <table v-else class="w-full text-sm">
+          <thead
+            class="sticky top-0 z-10 border-b bg-surface-base text-xs text-ink-gray-5"
+          >
+            <tr>
+              <th class="px-4 py-2 text-left font-medium">{{ __('Producto') }}</th>
+              <th class="px-3 py-2 text-left font-medium">
+                {{ __('Subcategorías') }}
+              </th>
+              <th class="px-3 py-2 text-right font-medium">{{ __('Precio') }}</th>
+              <th class="px-3 py-2 text-right font-medium">{{ __('Oport.') }}</th>
+              <th class="px-3 py-2 text-right font-medium">{{ __('Ganadas') }}</th>
+              <th class="px-3 py-2 text-right font-medium">{{ __('Revenue') }}</th>
+              <th class="px-3 py-2 text-left font-medium">{{ __('ERP') }}</th>
+              <th v-if="assignable" class="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="p in filteredProducts"
+              :key="p.name"
+              class="border-b hover:bg-surface-gray-1"
+            >
+              <td class="px-4 py-2">
+                <div class="flex items-center gap-2">
+                  <IndicatorIcon
+                    :class="colorClass(p.color)"
+                    class="h-3 w-3 shrink-0"
+                  />
+                  <div class="min-w-0">
+                    <div class="truncate font-medium text-ink-gray-9">
+                      {{ p.product_name || p.name }}
+                      <span
+                        v-if="p.disabled"
+                        class="ml-1 rounded bg-surface-gray-2 px-1 py-0.5 text-xs text-ink-gray-5"
+                        >{{ __('Discont.') }}</span
+                      >
+                    </div>
+                    <div class="truncate text-xs text-ink-gray-5">
+                      {{ p.product_code }}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-3 py-2">
+                <div class="flex max-w-xs flex-wrap gap-1">
+                  <span
+                    v-for="sc in productSubcats[p.name] || []"
+                    :key="sc"
+                    class="rounded bg-surface-gray-2 px-1.5 py-0.5 text-xs text-ink-gray-6"
+                  >
+                    {{ sc }}
+                  </span>
+                </div>
+              </td>
+              <td class="whitespace-nowrap px-3 py-2 text-right text-ink-gray-7">
+                {{ p.standard_rate ? money(p.standard_rate) : '—' }}
+              </td>
+              <td class="px-3 py-2 text-right font-medium text-ink-gray-9">
+                {{ sales(p.name).count }}
+              </td>
+              <td class="px-3 py-2 text-right font-medium text-green-700">
+                {{ sales(p.name).won }}
+              </td>
+              <td
+                class="whitespace-nowrap px-3 py-2 text-right font-medium text-ink-gray-9"
+              >
+                {{ money(sales(p.name).revenue) }}
+              </td>
+              <td class="px-3 py-2">
+                <span
+                  v-if="p.erpnext_item_code"
+                  class="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700"
+                  :title="__('Vinculado al ERP')"
+                >
+                  <FeatherIcon name="link" class="h-3 w-3" />
+                  {{ p.erpnext_item_code }}
+                </span>
+                <span v-else class="text-xs text-ink-gray-4">{{
+                  __('Sin ERP')
+                }}</span>
+              </td>
+              <td v-if="assignable" class="px-3 py-2 text-right">
+                <button
+                  class="rounded p-1 text-ink-gray-5 hover:bg-surface-gray-3 hover:text-ink-red-6"
+                  :title="__('Quitar de esta subcategoría')"
+                  @click="unassign(p.name, sel.key)"
+                >
+                  <FeatherIcon name="x" class="h-3.5 w-3.5" />
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -217,8 +233,9 @@
 <script setup>
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
+import Link from '@/components/Controls/Link.vue'
 import PackageIcon from '~icons/lucide/package'
-import { FeatherIcon, createResource } from 'frappe-ui'
+import { FeatherIcon, createResource, call, toast } from 'frappe-ui'
 import { ref, computed, reactive } from 'vue'
 
 const taxonomy = [
@@ -259,7 +276,7 @@ const taxonomy = [
           'Gestión de Documentación',
           'Gestión de Productos',
           'Colaboración MultiCAD',
-          'Gestión de Calidad (No Conformidades, APQP, PPAP, FMEA, Safety, Planes de Control, Inspección, Auditorías, Riesgos, FTA)',
+          'Gestión de Calidad',
           'Gestión de Proyectos',
           'Gestión de Activos',
           'Dashboard de Performance',
@@ -276,10 +293,7 @@ const taxonomy = [
           'Gestión de Operaciones (MES)',
         ],
       },
-      {
-        name: 'Mineria',
-        items: ['Planificación Minera', 'Diseño de Minas'],
-      },
+      { name: 'Mineria', items: ['Planificación Minera', 'Diseño de Minas'] },
       {
         name: 'Ingenieria de Sistemas',
         items: [
@@ -343,20 +357,56 @@ const taxonomy = [
 ]
 
 const search = ref('')
-const selCat = ref(null)
-const selGroup = ref(null)
+const pickValue = ref('')
+function onPick(v) {
+  if (v && sel.key) assign(v, sel.key)
+  pickValue.value = ''
+}
 const openCats = reactive({})
+const openGroups = reactive({})
+const sel = reactive({
+  level: 'all',
+  cat: null,
+  key: null,
+  title: 'Todo el catálogo',
+})
 
-function toggleCat(cat) {
-  if (cat.groups.length) {
-    openCats[cat.cat] = !openCats[cat.cat]
-  }
-  selectNode(cat.cat, null)
+const isAll = computed(() => sel.level === 'all')
+function navClass(active) {
+  return active
+    ? 'bg-surface-gray-3 text-ink-gray-9'
+    : 'text-ink-gray-7 hover:bg-surface-gray-2'
 }
-function selectNode(cat, group) {
-  selCat.value = cat
-  selGroup.value = group
+function selectAll() {
+  sel.level = 'all'
+  sel.cat = null
+  sel.key = null
+  sel.title = 'Todo el catálogo'
 }
+function selectCat(cat) {
+  openCats[cat.cat] = true
+  sel.level = 'cat'
+  sel.cat = cat.cat
+  sel.key = null
+  sel.title = cat.cat
+}
+function selectGroup(cat, g) {
+  openGroups[g.name] = true
+  sel.level = 'group'
+  sel.cat = cat.cat
+  sel.key = g.name
+  sel.title = cat.cat + ' › ' + g.name
+}
+function selectLeaf(cat, g, leaf) {
+  sel.level = 'leaf'
+  sel.cat = cat.cat
+  sel.key = leaf
+  sel.title = g.name + ' › ' + leaf
+}
+
+const assignable = computed(
+  () => (sel.level === 'group' || sel.level === 'leaf') && !search.value.trim(),
+)
 
 const productsRes = createResource({
   url: 'frappe.client.get_list',
@@ -372,7 +422,6 @@ const productsRes = createResource({
       'color',
       'disabled',
       'custom_categoria',
-      'custom_subcategoria',
       'erpnext_item_code',
     ],
     order_by: 'product_name asc',
@@ -382,6 +431,34 @@ const productsRes = createResource({
 })
 const products = computed(() => productsRes.data || [])
 const loading = computed(() => productsRes.loading)
+
+const subcatRes = createResource({
+  url: 'frappe.client.get_list',
+  params: {
+    doctype: 'CRM Product Subcategoria',
+    parent: 'CRM Product',
+    filters: { parenttype: 'CRM Product' },
+    fields: ['parent', 'subcategoria'],
+    limit_page_length: 0,
+  },
+  auto: true,
+})
+const productSubcats = computed(() => {
+  const m = {}
+  for (const r of subcatRes.data || []) {
+    if (!r.parent || !r.subcategoria) continue
+    ;(m[r.parent] ||= []).push(r.subcategoria)
+  }
+  return m
+})
+const productsByKey = computed(() => {
+  const m = {}
+  for (const r of subcatRes.data || []) {
+    if (!r.parent || !r.subcategoria) continue
+    ;(m[r.subcategoria] ||= new Set()).add(r.parent)
+  }
+  return m
+})
 
 const salesAllRes = createResource({
   url: 'frappe.client.get_list',
@@ -408,16 +485,11 @@ const salesWonRes = createResource({
   },
   auto: true,
 })
-
 const salesMap = computed(() => {
   const m = {}
   for (const r of salesAllRes.data || []) {
     if (!r.custom_producto) continue
-    m[r.custom_producto] = {
-      count: r.count || 0,
-      revenue: r.revenue || 0,
-      won: 0,
-    }
+    m[r.custom_producto] = { count: r.count || 0, revenue: r.revenue || 0, won: 0 }
   }
   for (const r of salesWonRes.data || []) {
     if (!r.custom_producto) continue
@@ -432,37 +504,67 @@ function sales(name) {
 }
 
 const filteredProducts = computed(() => {
-  let list = products.value
   const q = search.value.trim().toLowerCase()
   if (q) {
-    list = list.filter(
+    return products.value.filter(
       (p) =>
         (p.product_name || p.name || '').toLowerCase().includes(q) ||
         (p.product_code || '').toLowerCase().includes(q),
     )
-    return list
   }
-  if (selCat.value)
-    list = list.filter((p) => p.custom_categoria === selCat.value)
-  if (selGroup.value)
-    list = list.filter((p) => p.custom_subcategoria === selGroup.value)
-  return list
+  if (sel.level === 'all') return products.value
+  if (sel.level === 'cat')
+    return products.value.filter((p) => p.custom_categoria === sel.cat)
+  // group o leaf → por clave en la tabla N:N
+  const set = productsByKey.value[sel.key]
+  if (!set) return []
+  return products.value.filter((p) => set.has(p.name))
 })
 
-const currentGroupItems = computed(() => {
-  if (!selCat.value || !selGroup.value) return []
-  const cat = taxonomy.find((c) => c.cat === selCat.value)
-  const g = cat?.groups.find((x) => x.name === selGroup.value)
-  return g?.items || []
-})
-
-function countByCat(cat) {
+function countCat(cat) {
   return products.value.filter((p) => p.custom_categoria === cat).length
 }
-function countByGroup(cat, group) {
-  return products.value.filter(
-    (p) => p.custom_categoria === cat && p.custom_subcategoria === group,
-  ).length
+function countKey(key) {
+  const set = productsByKey.value[key]
+  return set ? set.size : 0
+}
+
+async function assign(product, key) {
+  if (!product || !key) return
+  const current = productSubcats.value[product] || []
+  if (current.includes(key)) {
+    toast.info(__('Ya estaba asignado'))
+    return
+  }
+  try {
+    const doc = await call('frappe.client.get', {
+      doctype: 'CRM Product',
+      name: product,
+    })
+    doc.custom_subcategorias = doc.custom_subcategorias || []
+    doc.custom_subcategorias.push({ subcategoria: key })
+    await call('frappe.client.save', { doc })
+    toast.success(__('Producto asignado'))
+    subcatRes.reload()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('No se pudo asignar'))
+  }
+}
+async function unassign(product, key) {
+  try {
+    const doc = await call('frappe.client.get', {
+      doctype: 'CRM Product',
+      name: product,
+    })
+    doc.custom_subcategorias = (doc.custom_subcategorias || []).filter(
+      (r) => r.subcategoria !== key,
+    )
+    await call('frappe.client.save', { doc })
+    toast.success(__('Producto quitado'))
+    subcatRes.reload()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('No se pudo quitar'))
+  }
 }
 
 const COLOR_MAP = {
@@ -483,19 +585,9 @@ const COLOR_MAP = {
 function colorClass(c) {
   return COLOR_MAP[c] || 'text-gray-400'
 }
-
-function stripHtml(html) {
-  if (!html) return ''
-  const tmp = document.createElement('div')
-  tmp.innerHTML = html
-  return (tmp.textContent || tmp.innerText || '').trim()
-}
-
 function money(n) {
   const v = Number(n) || 0
   if (!v) return '—'
-  if (Math.abs(v) >= 1000)
-    return '$' + Math.round(v).toLocaleString('es-AR')
-  return '$' + v.toLocaleString('es-AR')
+  return '$' + Math.round(v).toLocaleString('es-AR')
 }
 </script>
