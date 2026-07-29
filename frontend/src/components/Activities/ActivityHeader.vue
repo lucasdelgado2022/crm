@@ -69,7 +69,7 @@
       />
     </div>
     <Dropdown
-      v-else-if="title != 'Interactions'"
+      v-else-if="!['Interactions', 'Riesgos', 'Roadmap'].includes(title)"
       :options="defaultActions"
       @click.stop
     >

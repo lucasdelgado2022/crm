@@ -48,7 +48,7 @@
         v-model="tabIndex"
         as="div"
         :tabs="tabs"
-        class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow [&_[role='tab']:nth-child(n+7)]:!hidden"
+        class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow [&_[role='tab']:nth-child(n+9)]:!hidden"
       >
         <template #tab-panel>
           <Activities
@@ -645,6 +645,16 @@ const tabs = computed(() => {
       name: 'Interactions',
       label: __('Interacciones'),
       icon: PeopleIcon,
+    },
+    {
+      name: 'Riesgos',
+      label: __('Riesgos'),
+      icon: 'lucide-shield-alert',
+    },
+    {
+      name: 'Roadmap',
+      label: __('Roadmap'),
+      icon: 'lucide-milestone',
     },
     // --- secundarios (agrupados en "Más") ---
     {

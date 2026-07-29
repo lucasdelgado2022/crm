@@ -205,7 +205,9 @@ import {
   FeatherIcon,
   toast,
 } from 'frappe-ui'
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, h } from 'vue'
+
+const VideoIcon = () => h(FeatherIcon, { name: 'video' })
 
 const props = defineProps({
   doctype: { type: String, default: 'CRM Lead' },
@@ -214,6 +216,7 @@ const props = defineProps({
 
 const channelButtons = [
   { label: __('Teléfono'), value: 'Telefono', icon: PhoneIcon },
+  { label: __('Videollamada'), value: 'Videollamada', icon: VideoIcon },
   { label: __('Mail'), value: 'Mail', icon: Email2Icon },
   { label: 'LinkedIn', value: 'LinkedIn', icon: LinkedinIcon },
   { label: __('En persona'), value: 'En persona', icon: PeopleIcon },
@@ -226,6 +229,7 @@ function channelLabel(ch) {
 
 function channelIcon(ch) {
   if (ch === 'Telefono') return PhoneIcon
+  if (ch === 'Videollamada') return VideoIcon
   if (ch === 'Mail') return Email2Icon
   if (ch === 'LinkedIn') return LinkedinIcon
   if (ch === 'En persona') return PeopleIcon

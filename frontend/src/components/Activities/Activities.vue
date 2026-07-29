@@ -39,6 +39,12 @@
     <div v-else-if="title == 'Interactions'" class="h-full">
       <InteractionArea :doctype="doctype" :docname="docname" />
     </div>
+    <div v-else-if="title == 'Riesgos'" class="h-full">
+      <RiesgosArea :doctype="doctype" :docname="docname" />
+    </div>
+    <div v-else-if="title == 'Roadmap'" class="h-full">
+      <RoadmapArea :doctype="doctype" :docname="docname" />
+    </div>
     <div
       v-else-if="
         activities?.length ||
@@ -462,6 +468,8 @@ import ActivityHeader from '@/components/Activities/ActivityHeader.vue'
 import EmailArea from '@/components/Activities/EmailArea.vue'
 import CommentArea from '@/components/Activities/CommentArea.vue'
 import InteractionArea from '@/components/Activities/InteractionArea.vue'
+import RiesgosArea from '@/components/Activities/RiesgosArea.vue'
+import RoadmapArea from '@/components/Activities/RoadmapArea.vue'
 import CallArea from '@/components/Activities/CallArea.vue'
 import NoteArea from '@/components/Activities/NoteArea.vue'
 import TaskArea from '@/components/Activities/TaskArea.vue'
