@@ -440,6 +440,18 @@ const columns = computed(() => {
     _columns = [
       ..._columns,
       {
+        label: __('Email'),
+        key: '_has_email',
+        type: 'Indicator',
+        width: '5rem',
+      },
+      {
+        label: __('Teléfono'),
+        key: '_has_phone',
+        type: 'Indicator',
+        width: '5rem',
+      },
+      {
         label: __('Antigüedad'),
         key: '_age',
         type: 'Age',

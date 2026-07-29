@@ -131,6 +131,30 @@
           >
             {{ ageLabel(row.name) }}
           </div>
+          <div
+            v-else-if="column.key === '_has_email'"
+            class="flex items-center gap-1"
+            :title="hasEmail(row.name) ? __('Tiene email') : __('Sin email')"
+          >
+            <EmailIcon class="h-4 w-4 text-ink-gray-6" />
+            <FeatherIcon
+              :name="hasEmail(row.name) ? 'check' : 'x'"
+              class="h-3.5 w-3.5"
+              :class="hasEmail(row.name) ? 'text-green-600' : 'text-red-600'"
+            />
+          </div>
+          <div
+            v-else-if="column.key === '_has_phone'"
+            class="flex items-center gap-1"
+            :title="hasPhone(row.name) ? __('Tiene teléfono') : __('Sin teléfono')"
+          >
+            <PhoneIcon class="h-4 w-4 text-ink-gray-6" />
+            <FeatherIcon
+              :name="hasPhone(row.name) ? 'check' : 'x'"
+              class="h-3.5 w-3.5"
+              :class="hasPhone(row.name) ? 'text-green-600' : 'text-red-600'"
+            />
+          </div>
           <div v-else-if="column.key === '_liked_by'">
             <Button
               v-if="column.key == '_liked_by'"
@@ -242,6 +266,8 @@ import HeartIcon from '@/components/Icons/HeartIcon.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import StatusHeaderFilter from '@/components/ListViews/StatusHeaderFilter.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
+import EmailIcon from '@/components/Icons/EmailIcon.vue'
+import { FeatherIcon } from 'frappe-ui'
 import RatingInput from '@/components/Controls/RatingInput.vue'
 import MultipleAvatar from '@/components/MultipleAvatar.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
@@ -265,6 +291,7 @@ import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const ageMap = ref({})
+const contactMap = ref({})
 function daysSince(dt) {
   if (!dt) return null
   const created = new Date(String(dt).replace(' ', 'T'))
@@ -277,22 +304,37 @@ function ageLabel(name) {
   if (d == null) return ''
   return d === 1 ? '1 día' : `${d} días`
 }
+function hasEmail(name) {
+  return !!contactMap.value[name]?.email
+}
+function hasPhone(name) {
+  return !!contactMap.value[name]?.phone
+}
 async function loadAges(rows) {
   const names = (rows || []).map((r) => r.name).filter(Boolean)
   if (!names.length) {
     ageMap.value = {}
+    contactMap.value = {}
     return
   }
   try {
     const leads = await call('frappe.client.get_list', {
       doctype: 'CRM Lead',
       filters: { name: ['in', names] },
-      fields: ['name', 'creation'],
+      fields: ['name', 'creation', 'email', 'mobile_no'],
       limit_page_length: 0,
     })
     const gm = {}
-    for (const r of leads || []) gm[r.name] = daysSince(r.creation)
+    const cm = {}
+    for (const r of leads || []) {
+      gm[r.name] = daysSince(r.creation)
+      cm[r.name] = {
+        email: r.email,
+        phone: r.mobile_no,
+      }
+    }
     ageMap.value = gm
+    contactMap.value = cm
   } catch (e) {
     // silencioso
   }
