@@ -41,7 +41,6 @@
       v-slot="{ idx, column, item, row }"
       :rows="rows"
       doctype="CRM Deal"
-      :row-style="dealRowStyle"
     >
       <ListRowItem :item="item" :align="column.align" class="overflow-hidden">
         <template #prefix>
@@ -305,14 +304,6 @@ import { usersStore } from '@/stores/users'
 
 const { getProduct } = productsStore()
 const { getUser } = usersStore()
-
-// Resaltar la fila completa segun status: Won verde muy claro, Lost rojo muy claro
-function dealRowStyle(row) {
-  const s = (row && (row.status?.label ?? row.status)) || ''
-  if (s === 'Won') return { backgroundColor: 'rgba(34, 197, 94, 0.12)' }
-  if (s === 'Lost') return { backgroundColor: 'rgba(239, 68, 68, 0.12)' }
-  return null
-}
 
 function userLabel(u) {
   if (!u) return ''
