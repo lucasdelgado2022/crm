@@ -327,6 +327,7 @@ def get_attachments(doctype: str, name: str):
 				"file_url",
 				"file_size",
 				"is_private",
+				"custom_previous_version",
 				"modified",
 				"creation",
 				"owner",

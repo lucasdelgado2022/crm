@@ -131,6 +131,8 @@
       >
         <AttachmentArea
           :attachments="activities"
+          :doctype="doctype"
+          :docname="docname"
           @reload="all_activities.reload() && scroll()"
         />
       </div>
