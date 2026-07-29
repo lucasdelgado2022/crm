@@ -837,7 +837,7 @@ const software = createListResource({
   type: 'list',
   doctype: 'Software',
   cache: ['software', props.organizationId],
-  fields: ['name', 'software_name', 'modified'],
+  fields: ['name', 'software_name', 'custom_dominio', 'modified'],
   filters: [
     ['Software Organization', 'organization', '=', props.organizationId],
   ],
@@ -937,6 +937,7 @@ function getSoftwareRowObject(sw) {
     name: 'sw-' + sw.name,
     software_name: sw.software_name,
     tipo: __('Software'),
+    dominio: sw.custom_dominio || '',
     modified: timestampCell(sw.modified),
   }
 }
@@ -946,6 +947,7 @@ function getProcesoRowObject(p) {
     name: 'pt-' + p.name,
     software_name: p.nombre,
     tipo: __('Proceso / Tecnología'),
+    dominio: '',
     modified: timestampCell(p.modified),
   }
 }
@@ -962,9 +964,9 @@ const softwareColumns = [
     width: '11rem',
   },
   {
-    label: __('Last Modified'),
-    key: 'modified',
-    width: '10rem',
+    label: __('Dominio'),
+    key: 'dominio',
+    width: '9rem',
   },
   {
     label: '',

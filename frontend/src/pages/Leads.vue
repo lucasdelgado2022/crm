@@ -372,15 +372,8 @@ const updatedPageCount = ref(20)
 const viewControls = ref(null)
 
 const statusCounts = createResource({
-  url: 'frappe.client.get_list',
-  params: {
-    doctype: 'CRM Lead',
-    filters: { converted: 0 },
-    fields: ['status', 'count(name) as count'],
-    group_by: 'status',
-    order_by: 'count desc',
-    limit_page_length: 0,
-  },
+  url: 'crm.api.doc.get_status_counts',
+  params: { doctype: 'CRM Lead' },
   auto: true,
 })
 

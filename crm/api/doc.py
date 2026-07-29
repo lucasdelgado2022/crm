@@ -869,3 +869,22 @@ def get_organization_deals(organization, limit_page_length=50):
 		limit_page_length=int(limit_page_length or 50),
 		ignore_permissions=True,
 	)
+
+
+@frappe.whitelist()
+def get_status_counts(doctype):
+	"""Conteo de registros por status para los chips de filtro (Deals/Leads).
+	Se usa un metodo whitelisted en vez de frappe.client.get_list porque este
+	ultimo puede rechazar el campo agregado count(name) en el contexto web."""
+	if doctype not in ("CRM Deal", "CRM Lead"):
+		return []
+	filters = {}
+	if doctype == "CRM Lead":
+		filters["converted"] = 0
+	return frappe.get_all(
+		doctype,
+		filters=filters,
+		fields=["status", "count(name) as count"],
+		group_by="status",
+		order_by="count desc",
+	)
