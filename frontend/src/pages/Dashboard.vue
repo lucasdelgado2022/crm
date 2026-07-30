@@ -6,13 +6,13 @@
       </template>
       <template #right-header>
         <Button
-          v-if="!editing"
+          v-if="!editing && !isVentas"
           :label="__('Refresh')"
           :iconLeft="LucideRefreshCcw"
           @click="dashboardItems.reload"
         />
         <Button
-          v-if="!editing && isAdmin()"
+          v-if="!editing && isAdmin() && !isVentas"
           :label="__('Edit')"
           :iconLeft="LucidePenLine"
           @click="enableEditing"
@@ -50,7 +50,7 @@
         />
       </Dropdown>
       <Dropdown
-        v-if="!showDatePicker"
+        v-if="!showDatePicker && !isVentas"
         v-model="preset"
         :options="options"
         class="form-control"
@@ -65,7 +65,7 @@
         }"
       />
       <DateRangePicker
-        v-else
+        v-else-if="!isVentas"
         ref="datePickerRef"
         class="!w-48"
         :value="filters.period"
@@ -90,7 +90,7 @@
         </template>
       </DateRangePicker>
       <Link
-        v-if="isAdmin() || isManager()"
+        v-if="(isAdmin() || isManager()) && !isVentas"
         class="form-control w-48"
         variant="outline"
         :value="filters.user && getUser(filters.user).full_name"
@@ -124,9 +124,10 @@
       </Link>
     </div>
 
-    <div class="w-full overflow-y-scroll">
+    <div class="w-full flex-1 overflow-y-scroll">
+      <VentasPorMes v-if="isVentas" embedded />
       <DashboardGrid
-        v-if="!dashboardItems.loading && dashboardItems.data"
+        v-else-if="!dashboardItems.loading && dashboardItems.data"
         v-model="dashboardItems.data"
         class="pt-1"
         :editing="editing"
@@ -146,6 +147,7 @@ import LucideRefreshCcw from '~icons/lucide/refresh-ccw'
 import LucideUndo2 from '~icons/lucide/undo-2'
 import LucidePenLine from '~icons/lucide/pen-line'
 import DashboardGrid from '@/components/Dashboard/DashboardGrid.vue'
+import VentasPorMes from '@/pages/VentasPorMes.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import ViewBreadcrumbs from '@/components/ViewBreadcrumbs.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
@@ -173,6 +175,8 @@ const datePickerRef = ref(null)
 const preset = ref('Last 30 Days')
 const showAddChartModal = ref(false)
 const selectedDashboard = ref('Manager Dashboard')
+const VENTAS_POR_MES = '__ventas_por_mes'
+const isVentas = computed(() => selectedDashboard.value === VENTAS_POR_MES)
 
 const filters = reactive({
   period: getLastXDays(),
@@ -273,19 +277,26 @@ const dashboards = createListResource({
 })
 
 const selectedDashboardTitle = computed(() => {
+  if (isVentas.value) return __('Ventas por Mes')
   const d = dashboards.data?.find((x: any) => x.name === selectedDashboard.value)
   return d?.title || selectedDashboard.value
 })
 
-const dashboardOptions = computed(() =>
-  (dashboards.data || []).map((d: any) => ({
+const dashboardOptions = computed(() => [
+  ...(dashboards.data || []).map((d: any) => ({
     label: d.title || d.name,
     onClick: () => {
       selectedDashboard.value = d.name
       dashboardItems.reload()
     },
   })),
-)
+  {
+    label: __('Ventas por Mes'),
+    onClick: () => {
+      selectedDashboard.value = VENTAS_POR_MES
+    },
+  },
+])
 
 const dirty = computed(() => {
   if (!editing.value) return false

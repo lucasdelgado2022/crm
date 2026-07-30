@@ -2,7 +2,7 @@
   <Dropdown :options="dropdownItems" v-bind="$attrs">
     <template #default="{ open }">
       <button
-        class="relative flex h-12 items-center rounded-md py-2 duration-300 ease-in-out"
+        class="flex h-12 items-center rounded-md py-2 duration-300 ease-in-out"
         :class="
           isCollapsed
             ? 'w-auto px-0'
@@ -12,13 +12,6 @@
         "
       >
         <BrandLogo v-model="brand" class="h-8 max-w-16 flex-shrink-0" />
-        <span
-          v-if="unreadNotificationsCount"
-          class="absolute z-10 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-surface-red-6 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white"
-          :class="isCollapsed ? '-top-0.5 right-0' : 'left-6 top-1'"
-        >
-          {{ unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount }}
-        </span>
         <div
           class="flex flex-1 flex-col text-left duration-300 ease-in-out truncate"
           :class="
@@ -58,7 +51,6 @@ import FrappeCloudIcon from '@/components/Icons/FrappeCloudIcon.vue'
 import AppsIcon from '@/components/Icons/AppsIcon.vue'
 import { sessionStore } from '@/stores/session'
 import { usersStore } from '@/stores/users'
-import { unreadNotificationsCount } from '@/stores/notifications'
 import { getSettings } from '@/stores/settings'
 import { showSettings, isMobileView } from '@/composables/settings'
 import { showAboutModal } from '@/composables/modals'

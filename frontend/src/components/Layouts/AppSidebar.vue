@@ -285,11 +285,6 @@ const links = [
     to: 'OfertaComercial',
   },
   {
-    label: 'Ventas por Mes',
-    icon: LucideBarChart3,
-    to: 'VentasPorMes',
-  },
-  {
     label: 'Notes',
     icon: NoteIcon,
     to: 'Notes',

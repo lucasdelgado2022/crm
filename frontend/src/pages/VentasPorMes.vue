@@ -1,5 +1,5 @@
 <template>
-  <LayoutHeader>
+  <LayoutHeader v-if="!embedded">
     <template #left-header>
       <div class="flex items-center gap-2 text-lg font-semibold text-ink-gray-8">
         <ChartIcon class="h-5 w-5" />
@@ -45,6 +45,21 @@
           {{ opt.label }}
         </button>
       </div>
+      <!-- Controles año/solo-ganadas cuando está embebido en Dashboard -->
+      <template v-if="embedded">
+        <label
+          class="ml-auto flex cursor-pointer items-center gap-1.5 text-sm text-ink-gray-7"
+        >
+          <input v-model="onlyWon" type="checkbox" class="rounded" />
+          {{ __('Solo ganadas') }}
+        </label>
+        <select
+          v-model.number="year"
+          class="h-8 rounded-lg border border-outline-gray-2 bg-surface-base px-2 text-sm text-ink-gray-8 focus:outline-none"
+        >
+          <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+        </select>
+      </template>
     </div>
 
     <!-- Totales -->
@@ -154,6 +169,10 @@ import LayoutHeader from '@/components/LayoutHeader.vue'
 import ChartIcon from '~icons/lucide/bar-chart-3'
 import { createResource } from 'frappe-ui'
 import { ref, computed } from 'vue'
+
+defineProps({
+  embedded: { type: Boolean, default: false },
+})
 
 const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
