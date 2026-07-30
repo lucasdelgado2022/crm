@@ -35,16 +35,9 @@
             />
           </template>
         </SidebarLink>
-        <SidebarLink
-          :label="__('Dashboard')"
-          :icon="LucideLayoutDashboard"
-          :to="'Dashboard'"
-          :isCollapsed="isSidebarCollapsed"
-          class="mx-2 my-[1.5px]"
-        />
       </div>
       <div v-for="view in allViews" :key="view.label">
-        <div class="mx-3 my-1.5 border-t border-outline-gray-2" />
+        <div class="mx-2 my-1.5" />
         <CollapsibleSection
           :label="view.name"
           :hideLabel="view.hideLabel"
@@ -70,19 +63,15 @@
             </div>
           </template>
           <nav class="flex flex-col">
-            <template v-for="link in view.views" :key="link.label">
-              <div
-                v-if="link.groupStart"
-                class="mx-3 my-1.5 border-t border-outline-gray-2"
-              />
-              <SidebarLink
-                :icon="link.icon"
-                :label="__(link.label)"
-                :to="link.to"
-                :isCollapsed="isSidebarCollapsed"
-                class="mx-2 my-[1.5px]"
-              />
-            </template>
+            <SidebarLink
+              v-for="link in view.views"
+              :key="link.label"
+              :icon="link.icon"
+              :label="__(link.label)"
+              :to="link.to"
+              :isCollapsed="isSidebarCollapsed"
+              class="mx-2 my-[1.5px]"
+            />
           </nav>
         </CollapsibleSection>
       </div>
@@ -175,6 +164,7 @@
 import BrushCleaningIcon from '~icons/lucide/brush-cleaning'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
 import LucidePackage from '~icons/lucide/package'
+import LucideBarChart3 from '~icons/lucide/bar-chart-3'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import SearchIcon from '@/components/Icons/SearchIcon.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
@@ -254,6 +244,11 @@ onMounted(() => window.addEventListener('keydown', onSearchKeydown))
 
 const links = [
   {
+    label: 'Dashboard',
+    icon: LucideLayoutDashboard,
+    to: 'Dashboard',
+  },
+  {
     label: 'Leads',
     icon: LeadsIcon,
     to: 'Leads',
@@ -284,10 +279,14 @@ const links = [
     to: 'OfertaComercial',
   },
   {
+    label: 'Ventas por Mes',
+    icon: LucideBarChart3,
+    to: 'VentasPorMes',
+  },
+  {
     label: 'Notes',
     icon: NoteIcon,
     to: 'Notes',
-    groupStart: true,
   },
   {
     label: 'Tasks',

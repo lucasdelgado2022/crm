@@ -119,6 +119,11 @@ const routes = [
     component: () => import('@/pages/OfertaComercial.vue'),
   },
   {
+    path: '/ventas-por-mes',
+    name: 'VentasPorMes',
+    component: () => import('@/pages/VentasPorMes.vue'),
+  },
+  {
     alias: '/call-logs',
     path: '/call-logs/view/:viewType?',
     name: 'Call Logs',
