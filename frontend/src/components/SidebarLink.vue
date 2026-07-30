@@ -2,7 +2,9 @@
   <button
     class="flex h-7.5 cursor-pointer items-center rounded text-ink-gray-8 duration-300 ease-in-out focus:outline-none focus:transition-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-outline-gray-3"
     :class="
-      isActive ? 'bg-surface-elevation-3 shadow-sm' : 'hover:bg-surface-gray-2'
+      isActive
+        ? 'relative bg-surface-gray-3 font-medium text-ink-gray-9 shadow-sm before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r before:bg-ink-gray-9'
+        : 'hover:bg-surface-gray-2'
     "
     @click="handleClick"
   >

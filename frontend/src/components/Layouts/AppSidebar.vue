@@ -35,9 +35,16 @@
             />
           </template>
         </SidebarLink>
+        <SidebarLink
+          :label="__('Dashboard')"
+          :icon="LucideLayoutDashboard"
+          :to="'Dashboard'"
+          :isCollapsed="isSidebarCollapsed"
+          class="mx-2 my-[1.5px]"
+        />
       </div>
       <div v-for="view in allViews" :key="view.label">
-        <div class="mx-2 my-1.5" />
+        <div class="mx-3 my-1.5 border-t border-outline-gray-2" />
         <CollapsibleSection
           :label="view.name"
           :hideLabel="view.hideLabel"
@@ -63,15 +70,19 @@
             </div>
           </template>
           <nav class="flex flex-col">
-            <SidebarLink
-              v-for="link in view.views"
-              :key="link.label"
-              :icon="link.icon"
-              :label="__(link.label)"
-              :to="link.to"
-              :isCollapsed="isSidebarCollapsed"
-              class="mx-2 my-[1.5px]"
-            />
+            <template v-for="link in view.views" :key="link.label">
+              <div
+                v-if="link.groupStart"
+                class="mx-3 my-1.5 border-t border-outline-gray-2"
+              />
+              <SidebarLink
+                :icon="link.icon"
+                :label="__(link.label)"
+                :to="link.to"
+                :isCollapsed="isSidebarCollapsed"
+                class="mx-2 my-[1.5px]"
+              />
+            </template>
           </nav>
         </CollapsibleSection>
       </div>
@@ -243,11 +254,6 @@ onMounted(() => window.addEventListener('keydown', onSearchKeydown))
 
 const links = [
   {
-    label: 'Dashboard',
-    icon: LucideLayoutDashboard,
-    to: 'Dashboard',
-  },
-  {
     label: 'Leads',
     icon: LeadsIcon,
     to: 'Leads',
@@ -281,6 +287,7 @@ const links = [
     label: 'Notes',
     icon: NoteIcon,
     to: 'Notes',
+    groupStart: true,
   },
   {
     label: 'Tasks',
