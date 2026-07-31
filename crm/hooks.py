@@ -19,7 +19,13 @@ add_to_apps_screen = [
 		"title": "CRM",
 		"route": "/crm",
 		"has_permission": "crm.api.check_app_permission",
-	}
+	},
+	{
+		"name": "proyectos",
+		"logo": "/assets/crm/images/proyectos.svg",
+		"title": "Proyectos",
+		"route": "/app/projects",
+	},
 ]
 
 get_site_info = "crm.activation.get_site_info"
