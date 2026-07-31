@@ -658,6 +658,12 @@ const tabs = computed(() => {
     },
     // --- secundarios (agrupados en "Más") ---
     {
+      name: 'Comisiones',
+      label: __('Comisiones'),
+      icon: 'lucide-hand-coins',
+      secondary: true,
+    },
+    {
       name: 'Tasks',
       label: __('Tasks'),
       icon: TaskIcon,
