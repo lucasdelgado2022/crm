@@ -122,6 +122,15 @@
           </Tooltip>
         </template>
       </Link>
+      <Link
+        class="form-control w-48"
+        variant="outline"
+        :value="filters.territory"
+        doctype="CRM Territory"
+        :placeholder="__('País / Territorio')"
+        :hideMe="true"
+        @change="(v) => updateFilter('territory', v)"
+      />
     </div>
 
     <div class="w-full flex-1 overflow-y-scroll">
@@ -181,6 +190,7 @@ const isVentas = computed(() => selectedDashboard.value === VENTAS_POR_MES)
 const filters = reactive({
   period: getLastXDays(),
   user: null,
+  territory: null,
 })
 
 const fromDate = computed(() => {
@@ -256,6 +266,7 @@ const dashboardItems = createResource({
       from_date: fromDate.value,
       to_date: toDate.value,
       user: filters.user,
+      territory: filters.territory,
       dashboard: selectedDashboard.value,
     }
   },

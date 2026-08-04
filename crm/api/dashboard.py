@@ -24,7 +24,17 @@ def reset_to_default():
 
 @frappe.whitelist()
 @sales_user_only
-def get_dashboard(from_date: str | None = None, to_date: str | None = None, user: str | None = None, dashboard: str | None = None):
+def _call_chart_method(method, from_date, to_date, user, territory=None):
+	"""Llama al metodo del chart pasando territory solo si la funcion lo acepta."""
+	import inspect
+
+	kwargs = {"from_date": from_date, "to_date": to_date, "user": user}
+	if "territory" in inspect.signature(method).parameters:
+		kwargs["territory"] = territory
+	return method(**kwargs)
+
+
+def get_dashboard(from_date: str | None = None, to_date: str | None = None, user: str | None = None, dashboard: str | None = None, territory: str | None = None):
 	"""
 	Get the dashboard data for the CRM dashboard.
 	"""
@@ -58,7 +68,7 @@ def get_dashboard(from_date: str | None = None, to_date: str | None = None, user
 		method_name = f"get_{l['name']}"
 		if hasattr(frappe.get_attr("crm.api.dashboard"), method_name):
 			method = getattr(frappe.get_attr("crm.api.dashboard"), method_name)
-			l["data"] = method(from_date, to_date, user)
+			l["data"] = _call_chart_method(method, from_date, to_date, user, territory)
 		else:
 			l["data"] = None
 
@@ -68,7 +78,7 @@ def get_dashboard(from_date: str | None = None, to_date: str | None = None, user
 @frappe.whitelist()
 @sales_user_only
 def get_chart(
-	name: str, type: str, from_date: str | None = None, to_date: str | None = None, user: str | None = None
+	name: str, type: str, from_date: str | None = None, to_date: str | None = None, user: str | None = None, territory: str | None = None
 ):
 	"""
 	Get number chart data for the dashboard.
@@ -87,7 +97,7 @@ def get_chart(
 	method_name = f"get_{name}"
 	if hasattr(frappe.get_attr("crm.api.dashboard"), method_name):
 		method = getattr(frappe.get_attr("crm.api.dashboard"), method_name)
-		return method(from_date, to_date, user)
+		return _call_chart_method(method, from_date, to_date, user, territory)
 	else:
 		return {"error": _("Invalid chart name")}
 
@@ -139,7 +149,7 @@ def get_total_leads(from_date: str | None = None, to_date: str | None = None, us
 	}
 
 
-def get_ongoing_deals(from_date: str | None = None, to_date: str | None = None, user: str | None = None):
+def get_ongoing_deals(from_date: str | None = None, to_date: str | None = None, user: str | None = None, territory: str | None = None):
 	"""
 	Get ongoing deal count for the dashboard, and also calculate average deal value for ongoing deals.
 	"""
@@ -180,6 +190,9 @@ def get_ongoing_deals(from_date: str | None = None, to_date: str | None = None, 
 		)
 	)
 
+	if territory:
+		query = query.where(Deal.territory == territory)
+
 	result = query.run(as_dict=True)
 
 	current_month_deals = result[0].current_month_deals or 0
@@ -199,7 +212,7 @@ def get_ongoing_deals(from_date: str | None = None, to_date: str | None = None, 
 
 
 def get_average_ongoing_deal_value(
-	from_date: str | None = None, to_date: str | None = None, user: str | None = None
+	from_date: str | None = None, to_date: str | None = None, user: str | None = None, territory: str | None = None
 ):
 	"""
 	Get ongoing deal count for the dashboard, and also calculate average deal value for ongoing deals.
@@ -297,6 +310,9 @@ def get_won_deals(from_date: str | None = None, to_date: str | None = None, user
 		)
 	)
 
+	if territory:
+		query = query.where(Deal.territory == territory)
+
 	result = query.run(as_dict=True)
 
 	current_month_deals = result[0].current_month_deals or 0
@@ -373,7 +389,7 @@ def get_average_won_deal_value(
 	}
 
 
-def get_average_deal_value(from_date: str | None = None, to_date: str | None = None, user: str | None = None):
+def get_average_deal_value(from_date: str | None = None, to_date: str | None = None, user: str | None = None, territory: str | None = None):
 	"""
 	Get average deal value for the dashboard.
 	"""
@@ -410,6 +426,9 @@ def get_average_deal_value(from_date: str | None = None, to_date: str | None = N
 			Avg(Case().when(prev_cond, deal_value_expr).else_(None)).as_("prev_month_avg"),
 		)
 	)
+
+	if territory:
+		query = query.where(Deal.territory == territory)
 
 	result = query.run(as_dict=True)
 
@@ -658,7 +677,7 @@ def get_sales_trend(from_date: str | None = None, to_date: str | None = None, us
 	}
 
 
-def get_forecasted_revenue(from_date: str | None = None, to_date: str | None = None, user: str | None = None):
+def get_forecasted_revenue(from_date: str | None = None, to_date: str | None = None, user: str | None = None, territory: str | None = None):
 	"""
 	Get forecasted revenue for the dashboard.
 	[
@@ -709,6 +728,9 @@ def get_forecasted_revenue(from_date: str | None = None, to_date: str | None = N
 
 	if user:
 		query = query.where(CRMDeal.deal_owner == user)
+
+	if territory:
+		query = query.where(CRMDeal.territory == territory)
 
 	result = query.run(as_dict=True)
 
@@ -812,7 +834,7 @@ def get_funnel_conversion(from_date: str | None = None, to_date: str | None = No
 
 
 def get_deals_by_stage_axis(
-	from_date: str | None = None, to_date: str | None = None, user: str | None = None
+	from_date: str | None = None, to_date: str | None = None, user: str | None = None, territory: str | None = None
 ):
 	"""
 	Get deal data by stage for the dashboard.
@@ -843,6 +865,9 @@ def get_deals_by_stage_axis(
 	if user:
 		query = query.where(CRMDeal.deal_owner == user)
 
+	if territory:
+		query = query.where(CRMDeal.territory == territory)
+
 	result = query.run(as_dict=True)
 
 	return {
@@ -861,7 +886,7 @@ def get_deals_by_stage_axis(
 
 
 def get_deals_by_stage_donut(
-	from_date: str | None = None, to_date: str | None = None, user: str | None = None
+	from_date: str | None = None, to_date: str | None = None, user: str | None = None, territory: str | None = None
 ):
 	"""
 	Get deal data by stage for the dashboard.
@@ -891,6 +916,9 @@ def get_deals_by_stage_donut(
 
 	if user:
 		query = query.where(CRMDeal.deal_owner == user)
+
+	if territory:
+		query = query.where(CRMDeal.territory == territory)
 
 	result = query.run(as_dict=True)
 
@@ -1089,7 +1117,7 @@ def get_deals_by_territory(from_date: str | None = None, to_date: str | None = N
 
 
 def get_deals_by_salesperson(
-	from_date: str | None = None, to_date: str | None = None, user: str | None = None
+	from_date: str | None = None, to_date: str | None = None, user: str | None = None, territory: str | None = None
 ):
 	"""
 	Get deal data by salesperson for the dashboard.
@@ -1126,6 +1154,9 @@ def get_deals_by_salesperson(
 
 	if user:
 		query = query.where(CRMDeal.deal_owner == user)
+
+	if territory:
+		query = query.where(CRMDeal.territory == territory)
 
 	result = query.run(as_dict=True)
 
@@ -1209,7 +1240,7 @@ def get_deal_status_change_counts(
 
 
 def get_deals_funnel_by_stage(
-	from_date: str | None = None, to_date: str | None = None, user: str | None = None
+	from_date: str | None = None, to_date: str | None = None, user: str | None = None, territory: str | None = None
 ):
 	"""Embudo de deals por etapa, con TODAS las etapas (ongoing + Won) ordenadas
 	por orden de avance (CRM Deal Status.position). Excluye Lost."""
@@ -1232,6 +1263,9 @@ def get_deals_funnel_by_stage(
 
 	if user:
 		query = query.where(CRMDeal.deal_owner == user)
+
+	if territory:
+		query = query.where(CRMDeal.territory == territory)
 
 	result = query.run(as_dict=True)
 
