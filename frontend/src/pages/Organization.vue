@@ -512,6 +512,132 @@
           <EmptyState v-else :icon="SoftwareIcon" :name="__('Software')" />
         </div>
       </div>
+
+      <!-- Widget: Datos / Hechos (con investigacion IA) -->
+      <div
+        :class="
+          widgetShown('Facts')
+            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
+            : 'flex shrink-0 flex-col rounded-lg border'
+        "
+      >
+        <div
+          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
+        >
+          <div
+            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
+          >
+            <FeatherIcon name="file-text" class="h-5" />
+            {{ __('Datos / Hechos') }}
+            <Badge variant="subtle" theme="gray" size="sm">
+              {{ facts.data?.length || 0 }}
+            </Badge>
+          </div>
+          <div class="flex gap-2">
+            <Button variant="subtle" :loading="aiLoading" @click="investigarIA">
+              <template #prefix>
+                <FeatherIcon name="zap" class="h-4" />
+              </template>
+              {{ __('Investigar con IA') }}
+            </Button>
+            <Button variant="outline" @click="showAddFact = !showAddFact">
+              <template #prefix>
+                <FeatherIcon name="plus" class="h-4" />
+              </template>
+              {{ __('Agregar') }}
+            </Button>
+            <Button
+              variant="ghost"
+              :tooltip="maxWidget === 'Facts' ? __('Restaurar') : __('Maximizar')"
+              @click="toggleMax('Facts')"
+            >
+              <template #icon>
+                <component
+                  :is="maxWidget === 'Facts' ? MinimizeIcon : MaximizeIcon"
+                  class="h-4 w-4"
+                />
+              </template>
+            </Button>
+          </div>
+        </div>
+        <div
+          v-show="widgetShown('Facts')"
+          class="min-h-0 flex-1 overflow-y-auto p-4"
+        >
+          <div v-if="showAddFact" class="mb-3 rounded-lg border p-3">
+            <textarea
+              v-model="newFact.hecho"
+              :placeholder="__('Hecho / dato...')"
+              rows="2"
+              class="w-full rounded border border-outline-gray-2 bg-surface-base p-2 text-sm text-ink-gray-8 focus:outline-none"
+            />
+            <input
+              v-model="newFact.fuente"
+              :placeholder="__('Fuente (URL o descripción)')"
+              class="mt-2 w-full rounded border border-outline-gray-2 bg-surface-base p-2 text-sm text-ink-gray-8 focus:outline-none"
+            />
+            <div class="mt-2 flex justify-end gap-2">
+              <Button variant="ghost" @click="showAddFact = false">
+                {{ __('Cancelar') }}
+              </Button>
+              <Button
+                variant="solid"
+                :disabled="!newFact.hecho.trim()"
+                @click="addFact"
+              >
+                {{ __('Guardar') }}
+              </Button>
+            </div>
+          </div>
+          <div v-if="facts.data?.length" class="flex flex-col gap-2">
+            <div
+              v-for="f in facts.data"
+              :key="f.name"
+              class="group flex items-start gap-2 rounded-lg border p-2.5"
+            >
+              <span
+                class="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-xs font-medium"
+                :class="
+                  f.origen === 'IA'
+                    ? 'bg-violet-100 text-violet-700'
+                    : 'bg-surface-gray-2 text-ink-gray-6'
+                "
+                >{{ f.origen === 'IA' ? 'IA' : 'Manual' }}</span
+              >
+              <div class="min-w-0 flex-1">
+                <div class="whitespace-pre-line text-sm text-ink-gray-8">
+                  {{ f.hecho }}
+                </div>
+                <a
+                  v-if="f.fuente && /^https?:/.test(f.fuente)"
+                  :href="f.fuente"
+                  target="_blank"
+                  class="block truncate text-xs text-blue-600 hover:underline"
+                  >{{ f.fuente }}</a
+                >
+                <div
+                  v-else-if="f.fuente"
+                  class="truncate text-xs text-ink-gray-5"
+                >
+                  {{ f.fuente }}
+                </div>
+              </div>
+              <button
+                class="shrink-0 rounded p-1 text-ink-gray-4 opacity-0 hover:bg-surface-gray-2 hover:text-ink-red-6 group-hover:opacity-100"
+                @click="deleteFact(f.name)"
+              >
+                <FeatherIcon name="x" class="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+          <div
+            v-else
+            class="flex h-24 items-center justify-center px-4 text-center text-sm text-ink-gray-4"
+          >
+            {{ __('Sin datos aún. Usá "Investigar con IA" o "Agregar".') }}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <ErrorPage
@@ -637,6 +763,63 @@ function toggleMax(key) {
 }
 function widgetShown(key) {
   return !maxWidget.value || maxWidget.value === key
+}
+
+// Widget Datos / Hechos (+ investigacion IA)
+const facts = createListResource({
+  type: 'list',
+  doctype: 'CRM Fact',
+  cache: ['facts', props.organizationId],
+  fields: ['name', 'hecho', 'fuente', 'origen', 'modified'],
+  filters: { organization: props.organizationId },
+  orderBy: 'modified desc',
+  pageLength: 100,
+  auto: true,
+})
+const showAddFact = ref(false)
+const newFact = ref({ hecho: '', fuente: '' })
+async function addFact() {
+  if (!newFact.value.hecho.trim()) return
+  try {
+    await call('frappe.client.insert', {
+      doc: {
+        doctype: 'CRM Fact',
+        organization: props.organizationId,
+        hecho: newFact.value.hecho,
+        fuente: newFact.value.fuente,
+        origen: 'Manual',
+      },
+    })
+    newFact.value = { hecho: '', fuente: '' }
+    showAddFact.value = false
+    facts.reload()
+    toast.success(__('Dato agregado'))
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('No se pudo guardar'))
+  }
+}
+async function deleteFact(name) {
+  try {
+    await call('frappe.client.delete', { doctype: 'CRM Fact', name })
+    facts.reload()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('No se pudo eliminar'))
+  }
+}
+const aiLoading = ref(false)
+async function investigarIA() {
+  aiLoading.value = true
+  try {
+    const res = await call('crm.api.ai_research.investigar_organizacion', {
+      organization: props.organizationId,
+    })
+    facts.reload()
+    toast.success(__('IA: {0} hechos agregados', [res?.creados ?? 0]))
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('No se pudo investigar con IA'))
+  } finally {
+    aiLoading.value = false
+  }
 }
 
 const {
