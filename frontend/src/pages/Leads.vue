@@ -9,6 +9,16 @@
         :actions="leadsListView.customListActions"
       />
       <Button
+        variant="outline"
+        :tooltip="__('Copiar link de esta vista con sus filtros')"
+        @click="shareView"
+      >
+        <template #prefix>
+          <FeatherIcon name="share-2" class="h-4" />
+        </template>
+        {{ __('Compartir') }}
+      </Button>
+      <Button
         variant="solid"
         :label="__('Create')"
         iconLeft="plus"
@@ -337,9 +347,9 @@ import { useBroadcast } from '@/composables/useBroadcast'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
 import { timestampCell } from '@/composables/useTimelinePreferences'
 import { useOnboarding, useTelemetry } from 'frappe-ui/frappe'
-import { Avatar, Tooltip, Dropdown, createResource } from 'frappe-ui'
+import { Avatar, Tooltip, Dropdown, createResource, FeatherIcon, toast } from 'frappe-ui'
 import { useRoute } from 'vue-router'
-import { ref, computed, reactive, h } from 'vue'
+import { ref, computed, reactive, h, watch } from 'vue'
 
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta('CRM Lead')
@@ -370,6 +380,38 @@ const loadMore = ref(1)
 const triggerResize = ref(1)
 const updatedPageCount = ref(20)
 const viewControls = ref(null)
+
+// #5 Vistas compartibles por URL
+function shareView() {
+  const filters = leads.value?.params?.filters || {}
+  const u = new URL(window.location.href)
+  if (Object.keys(filters).length) u.searchParams.set('f', JSON.stringify(filters))
+  else u.searchParams.delete('f')
+  const link = u.toString()
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard
+      .writeText(link)
+      .then(() => toast.success(__('Link de la vista copiado')))
+      .catch(() => toast.info(link))
+  } else {
+    toast.info(link)
+  }
+}
+let sharedApplied = false
+watch(
+  viewControls,
+  (vc) => {
+    if (vc && !sharedApplied && route.query.f) {
+      sharedApplied = true
+      try {
+        vc.updateFilter?.(JSON.parse(route.query.f))
+      } catch (e) {
+        // ignore
+      }
+    }
+  },
+  { immediate: true },
+)
 
 const statusCounts = createResource({
   url: 'crm.api.doc.get_status_counts',
