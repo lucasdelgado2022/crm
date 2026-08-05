@@ -888,3 +888,45 @@ def get_status_counts(doctype):
 		group_by="status",
 		order_by="count desc",
 	)
+
+
+@frappe.whitelist()
+def resolve_maps_coords(url):
+	"""Extrae lat,lng de un link de Google Maps. Sigue redirects para short links
+	(maps.app.goo.gl / goo.gl/maps). Devuelve {lat, lng, coordenadas}."""
+	import re
+
+	if not url:
+		return {}
+
+	def extract(u):
+		if not u:
+			return None
+		patterns = [
+			r"@(-?\d+\.\d+),(-?\d+\.\d+)",
+			r"[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)",
+			r"[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)",
+			r"!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)",
+			r"/(-?\d+\.\d+),(-?\d+\.\d+)",
+		]
+		for pat in patterns:
+			m = re.search(pat, u)
+			if m:
+				return m.group(1), m.group(2)
+		return None
+
+	coords = extract(url)
+	if not coords:
+		try:
+			import requests
+
+			r = requests.get(
+				url, allow_redirects=True, timeout=8, headers={"User-Agent": "Mozilla/5.0"}
+			)
+			coords = extract(r.url) or extract(r.text[:8000])
+		except Exception:
+			coords = None
+
+	if coords:
+		return {"lat": coords[0], "lng": coords[1], "coordenadas": f"{coords[0]},{coords[1]}"}
+	return {}
