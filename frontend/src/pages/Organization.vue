@@ -156,6 +156,45 @@
       </div>
     </Resizer>
     <div class="flex flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5">
+      <!-- Widget: Plataformas y Comunidades -->
+      <div class="shrink-0 rounded-lg border">
+        <div
+          class="flex items-center gap-2 border-b px-4 py-3 text-base font-semibold text-ink-gray-8"
+        >
+          <FeatherIcon name="link-2" class="h-5" />
+          {{ __('Plataformas y Comunidades') }}
+        </div>
+        <div class="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4">
+          <a
+            v-for="l in plataformaLinks"
+            :key="l.key"
+            :href="l.url || undefined"
+            :target="l.url ? '_blank' : undefined"
+            rel="noopener noreferrer"
+            class="flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center"
+            :class="
+              l.url
+                ? 'cursor-pointer hover:border-outline-gray-3 hover:bg-surface-gray-1'
+                : 'cursor-default opacity-50'
+            "
+            @click="!l.url && $event.preventDefault()"
+          >
+            <FeatherIcon
+              :name="l.icon"
+              class="h-5 w-5"
+              :class="l.url ? 'text-ink-gray-7' : 'text-ink-gray-4'"
+            />
+            <span class="text-sm text-ink-gray-8">{{ l.label }}</span>
+            <span
+              class="text-xs"
+              :class="l.url ? 'text-blue-600' : 'text-ink-gray-4'"
+            >
+              {{ l.url ? __('Abrir') : __('sin configurar') }}
+            </span>
+          </a>
+        </div>
+      </div>
+
       <!-- Widget: Oportunidades -->
       <div
         :class="
@@ -873,6 +912,37 @@ const mapUrl = computed(
     encodeURIComponent(mapQuery.value) +
     '&output=embed&z=6',
 )
+
+// Plataformas y Comunidades (links)
+const plataformaLinks = computed(() => {
+  const d = organization.doc || {}
+  return [
+    {
+      key: 'plataforma',
+      label: __('Plataforma de Cliente'),
+      icon: 'monitor',
+      url: d.custom_plataforma_cliente,
+    },
+    {
+      key: 'solaer',
+      label: __('Comunidad de Solaer'),
+      icon: 'users',
+      url: d.custom_comunidad_solaer,
+    },
+    {
+      key: 'ds',
+      label: __('Comunidad de DS'),
+      icon: 'users',
+      url: d.custom_comunidad_ds,
+    },
+    {
+      key: 'ifweloop',
+      label: __('Comunidad Ifweloop'),
+      icon: 'users',
+      url: d.custom_comunidad_ifweloop,
+    },
+  ]
+})
 
 onMounted(async () => {
   if (organization.doc) await triggerOnRender()
