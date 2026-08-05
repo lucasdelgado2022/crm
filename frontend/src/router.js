@@ -124,6 +124,11 @@ const routes = [
     component: () => import('@/pages/VentasPorMes.vue'),
   },
   {
+    path: '/alertas',
+    name: 'Alertas',
+    component: () => import('@/pages/AlertasPanel.vue'),
+  },
+  {
     alias: '/call-logs',
     path: '/call-logs/view/:viewType?',
     name: 'Call Logs',

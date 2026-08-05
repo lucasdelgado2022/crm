@@ -176,6 +176,7 @@ import BrushCleaningIcon from '~icons/lucide/brush-cleaning'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
 import LucidePackage from '~icons/lucide/package'
 import LucideBarChart3 from '~icons/lucide/bar-chart-3'
+import LucideBell from '~icons/lucide/bell'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import SearchIcon from '@/components/Icons/SearchIcon.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
@@ -254,6 +255,11 @@ function onSearchKeydown(e) {
 onMounted(() => window.addEventListener('keydown', onSearchKeydown))
 
 const links = [
+  {
+    label: 'Alertas',
+    icon: LucideBell,
+    to: 'Alertas',
+  },
   {
     label: 'Leads',
     icon: LeadsIcon,
