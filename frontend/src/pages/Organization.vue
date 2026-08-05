@@ -83,19 +83,6 @@
                     <WebsiteIcon class="size-4" />
                     <span>{{ website(organization.doc.website) }}</span>
                   </div>
-                  <button
-                    v-if="organization.doc.website"
-                    class="flex w-fit items-center gap-1.5 text-sm text-ink-gray-5 hover:text-ink-gray-8"
-                    :title="__('Traer el logo desde el dominio del sitio web')"
-                    @click="traerLogo"
-                  >
-                    <FeatherIcon
-                      :name="logoLoading ? 'loader' : 'image'"
-                      class="h-3.5 w-3.5"
-                      :class="{ 'animate-spin': logoLoading }"
-                    />
-                    {{ __('Traer logo') }}
-                  </button>
                   <div class="flex items-center gap-3">
                     <Link
                       doctype="CRM Territory"
@@ -534,14 +521,10 @@
         </div>
       </div>
 
+      <!-- Fila: Datos/Hechos + Ubicación (paralelos) -->
+      <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
       <!-- Widget: Datos / Hechos (con investigacion IA) -->
-      <div
-        :class="
-          widgetShown('Facts')
-            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
-            : 'flex shrink-0 flex-col rounded-lg border'
-        "
-      >
+      <div class="flex min-h-0 flex-col overflow-hidden rounded-lg border">
         <div
           class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
         >
@@ -658,6 +641,32 @@
             {{ __('Sin datos aún. Usá "Investigar con IA" o "Agregar".') }}
           </div>
         </div>
+      </div>
+
+      <!-- Widget: Ubicación (Google Maps) -->
+      <div class="flex min-h-0 flex-col overflow-hidden rounded-lg border">
+        <div
+          class="flex shrink-0 items-center gap-2 border-b px-4 py-3 text-base font-semibold text-ink-gray-8"
+        >
+          <FeatherIcon name="map-pin" class="h-5" />
+          {{ __('Ubicación') }}
+        </div>
+        <div class="min-h-[16rem] flex-1">
+          <iframe
+            v-if="mapQuery"
+            :src="mapUrl"
+            class="h-full w-full border-0"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          />
+          <div
+            v-else
+            class="flex h-full items-center justify-center px-4 text-center text-sm text-ink-gray-4"
+          >
+            {{ __('Sin ubicación (falta país o dirección)') }}
+          </div>
+        </div>
+      </div>
       </div>
     </div>
   </div>
@@ -844,42 +853,6 @@ async function investigarIA() {
   }
 }
 
-// #3 Traer logo de marca desde el dominio del sitio web
-const logoLoading = ref(false)
-function traerLogo() {
-  const web = organization.doc?.website
-  if (!web) {
-    toast.error(__('La organización no tiene sitio web'))
-    return
-  }
-  const domain = String(web)
-    .replace(/^https?:\/\//i, '')
-    .replace(/^www\./i, '')
-    .split('/')[0]
-    .trim()
-  if (!domain) {
-    toast.error(__('No se pudo determinar el dominio'))
-    return
-  }
-  logoLoading.value = true
-  const clearbit = 'https://logo.clearbit.com/' + domain
-  const favicon =
-    'https://www.google.com/s2/favicons?domain=' + domain + '&sz=128'
-  const img = new Image()
-  img.onload = () => setLogo(clearbit)
-  img.onerror = () => setLogo(favicon)
-  img.src = clearbit
-}
-function setLogo(url) {
-  organization.setValue
-    .submit({ organization_logo: url })
-    .then(() => toast.success(__('Logo actualizado')))
-    .catch(() => toast.error(__('No se pudo guardar el logo')))
-    .finally(() => {
-      logoLoading.value = false
-    })
-}
-
 const {
   document: organization,
   permissions,
@@ -888,6 +861,18 @@ const {
 } = useDocument('CRM Organization', props.organizationId)
 
 const canDelete = computed(() => permissions.data?.permissions?.delete || false)
+
+// Ubicacion (Google Maps)
+const mapQuery = computed(() => {
+  const d = organization.doc || {}
+  return [d.organization_name || d.name, d.territory].filter(Boolean).join(', ')
+})
+const mapUrl = computed(
+  () =>
+    'https://maps.google.com/maps?q=' +
+    encodeURIComponent(mapQuery.value) +
+    '&output=embed&z=6',
+)
 
 onMounted(async () => {
   if (organization.doc) await triggerOnRender()
