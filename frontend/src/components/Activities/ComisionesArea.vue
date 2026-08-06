@@ -7,12 +7,37 @@
           {{ fmt(base) }} ({{ __('Solaer Revenue') }})
         </span>
       </div>
-      <Button
-        variant="solid"
-        :label="__('Agregar comisión')"
-        iconLeft="plus"
-        @click="addRow"
-      />
+      <div class="flex items-center gap-2">
+        <Button
+          v-if="hasAprobadas"
+          variant="outline"
+          :label="__('Generar pago en Payroll')"
+          :loading="generating"
+          @click="generarPago"
+        >
+          <template #prefix>
+            <span class="lucide-banknote size-4" />
+          </template>
+        </Button>
+        <Button
+          variant="solid"
+          :label="__('Agregar comisión')"
+          iconLeft="plus"
+          :disabled="!isWon"
+          @click="addRow"
+        />
+      </div>
+    </div>
+
+    <div
+      v-if="!isWon"
+      class="mb-3 rounded-md bg-surface-amber-1 px-3 py-2 text-sm text-ink-amber-3"
+    >
+      {{
+        __(
+          'Las comisiones se habilitan cuando la oportunidad está en estado Won.',
+        )
+      }}
     </div>
 
     <div v-if="rows.length" class="flex flex-col gap-2 overflow-y-auto">
@@ -78,7 +103,7 @@
     <div class="mt-3 rounded-md bg-surface-gray-2 px-3 py-2 text-sm text-ink-gray-6">
       {{
         __(
-          'La orden de pago en Payroll se generará cuando el módulo de Payroll (hrms) esté instalado.',
+          'Marcá las comisiones como "Aprobado" y usá "Generar pago en Payroll" para crear una orden de pago (Additional Salary) por vendedor. Requiere que cada Sales Person tenga un Employee vinculado.',
         )
       }}
     </div>
@@ -97,10 +122,17 @@ const props = defineProps({
 
 const rows = ref([])
 const base = ref(0)
+const dealStatus = ref('')
+const generating = ref(false)
 const estados = ['Pendiente', 'Aprobado', 'Pagado'].map((e) => ({
   label: e,
   value: e,
 }))
+
+const isWon = computed(() => dealStatus.value === 'Won')
+const hasAprobadas = computed(() =>
+  rows.value.some((r) => r.estado === 'Aprobado'),
+)
 
 function fmt(v) {
   const n = Number(v || 0)
@@ -116,9 +148,15 @@ async function load() {
     const v = await call('frappe.client.get_value', {
       doctype: props.doctype,
       filters: props.docname,
-      fieldname: ['custom_comisiones_data', 'custom_solaer_revenue', 'annual_revenue'],
+      fieldname: [
+        'custom_comisiones_data',
+        'custom_solaer_revenue',
+        'annual_revenue',
+        'status',
+      ],
     })
     base.value = Number(v?.custom_solaer_revenue || v?.annual_revenue || 0)
+    dealStatus.value = v?.status || ''
     rows.value = JSON.parse(v?.custom_comisiones_data || '[]') || []
   } catch (e) {
     rows.value = []
@@ -160,6 +198,32 @@ function addRow() {
 function removeRow(i) {
   rows.value.splice(i, 1)
   save()
+}
+
+async function generarPago() {
+  if (generating.value) return
+  generating.value = true
+  try {
+    const res = await call('crm.api.doc.generar_pago_comisiones', {
+      deal: props.docname,
+    })
+    if (res?.creados) {
+      toast.success(
+        __('{0} pago(s) de comisión generados en Payroll', [res.creados]),
+      )
+    }
+    if (res?.errores?.length) {
+      toast.error(res.errores.join(' · '))
+    }
+    if (!res?.creados && !res?.errores?.length) {
+      toast.info(__('No hay comisiones aprobadas para pagar'))
+    }
+    await load()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('No se pudo generar el pago'))
+  } finally {
+    generating.value = false
+  }
 }
 
 onMounted(load)

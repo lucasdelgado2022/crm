@@ -930,3 +930,52 @@ def resolve_maps_coords(url):
 	if coords:
 		return {"lat": coords[0], "lng": coords[1], "coordenadas": f"{coords[0]},{coords[1]}"}
 	return {}
+
+
+@frappe.whitelist()
+def generar_pago_comisiones(deal):
+	"""Genera Additional Salary (hrms/Payroll) por cada comision "Aprobado" del deal.
+	Requiere Sales Person con Employee vinculado. Marca la comision como "Pagado"."""
+	if not deal:
+		return {"creados": 0, "errores": [_("Falta la oportunidad")]}
+	data = frappe.db.get_value("CRM Deal", deal, ["custom_comisiones_data", "status"], as_dict=True)
+	if not data:
+		return {"creados": 0, "errores": [_("Oportunidad no encontrada")]}
+	if data.status != "Won":
+		return {"creados": 0, "errores": [_("La oportunidad debe estar en estado Won")]}
+	rows = frappe.parse_json(data.custom_comisiones_data or "[]") or []
+	comp = "Comision Ventas"
+	if not frappe.db.exists("Salary Component", comp):
+		frappe.get_doc({"doctype": "Salary Component", "salary_component": comp, "salary_component_abbr": "ComV", "type": "Earning"}).insert(ignore_permissions=True)
+	creados = 0
+	errores = []
+	changed = False
+	for r in rows:
+		if (r.get("estado") or "") != "Aprobado":
+			continue
+		sp = r.get("sales_person")
+		amount = frappe.utils.flt(r.get("monto") or 0)
+		if not sp:
+			errores.append(_("Comision sin vendedor"))
+			continue
+		if amount <= 0:
+			errores.append(_("{0}: monto en cero").format(sp))
+			continue
+		employee = frappe.db.get_value("Sales Person", sp, "employee")
+		if not employee:
+			errores.append(_("{0} sin Employee vinculado").format(sp))
+			continue
+		company = frappe.db.get_value("Employee", employee, "company")
+		try:
+			add_sal = frappe.get_doc({"doctype": "Additional Salary", "employee": employee, "salary_component": comp, "amount": amount, "payroll_date": frappe.utils.today(), "company": company, "overwrite_salary_structure_amount": 1, "ref_doctype": "CRM Deal", "ref_docname": deal}).insert(ignore_permissions=True)
+			add_sal.submit()
+			r["estado"] = "Pagado"
+			r["additional_salary"] = add_sal.name
+			creados += 1
+			changed = True
+		except Exception as e:
+			errores.append(_("{0}: {1}").format(sp, str(e)[:120]))
+	if changed:
+		frappe.db.set_value("CRM Deal", deal, "custom_comisiones_data", frappe.as_json(rows))
+		frappe.db.commit()
+	return {"creados": creados, "errores": errores}
