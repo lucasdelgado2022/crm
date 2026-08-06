@@ -124,14 +124,6 @@
           </template>
         </FileUploader>
       </div>
-      <div v-if="organization.doc" class="shrink-0 px-3 pb-1">
-        <OrganizationLocation
-          :key="organization.doc.name"
-          :docname="organization.doc.name"
-          :google-maps="organization.doc.custom_google_maps"
-          :coordenadas="organization.doc.custom_coordenadas"
-        />
-      </div>
       <div
         v-if="sections.data"
         class="flex flex-1 flex-col justify-between overflow-hidden"
@@ -754,7 +746,6 @@
 import ErrorPage from '@/components/ErrorPage.vue'
 import Resizer from '@/components/Resizer.vue'
 import SidePanelLayout from '@/components/SidePanelLayout.vue'
-import OrganizationLocation from '@/components/OrganizationLocation.vue'
 import Icon from '@/components/Icon.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'

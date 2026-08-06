@@ -59,8 +59,16 @@
       :tabs="tabs"
       class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
     >
-      <template #tab-panel>
+      <template #tab-panel="{ tab }">
+        <FactsMapPanel
+          v-if="tab.name === 'FactsMap'"
+          :key="leadId"
+          ref-field="lead"
+          :ref-value="leadId"
+          :map-query="leadMapQuery"
+        />
         <Activities
+          v-else
           ref="activities"
           v-model:reload="reload"
           v-model:tabIndex="tabIndex"
@@ -267,6 +275,8 @@ import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import LostReasonModal from '@/components/Modals/LostReasonModal.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import Activities from '@/components/Activities/Activities.vue'
+import FactsMapPanel from '@/components/FactsMapPanel.vue'
+import LucideMapPin from '~icons/lucide/map-pin'
 import AssignTo from '@/components/AssignTo.vue'
 import FilesUploader from '@/components/FilesUploader/FilesUploader.vue'
 import SidePanelLayout from '@/components/SidePanelLayout.vue'
@@ -346,6 +356,11 @@ const {
 const canDelete = computed(() => permissions.data?.permissions?.delete || false)
 
 const doc = computed(() => document.doc || {})
+
+const leadMapQuery = computed(() => {
+  const d = doc.value || {}
+  return [d.organization || d.lead_name, d.territory].filter(Boolean).join(', ')
+})
 
 onMounted(async () => {
   if (document.doc) await triggerOnRender()
@@ -449,6 +464,11 @@ const tabs = computed(() => {
       name: 'Interactions',
       label: __('Interacciones'),
       icon: PeopleIcon,
+    },
+    {
+      name: 'FactsMap',
+      label: __('Datos'),
+      icon: LucideMapPin,
     },
     {
       name: 'Data',

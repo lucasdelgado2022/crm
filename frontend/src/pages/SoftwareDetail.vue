@@ -53,7 +53,14 @@
         </button>
       </template>
       <template #tab-panel="{ tab }">
-        <div class="flex flex-1 flex-col overflow-hidden">
+        <FactsMapPanel
+          v-if="tab.label === 'Datos'"
+          :key="props.softwareId"
+          ref-field="software"
+          :ref-value="props.softwareId"
+          :map-query="softwareMapQuery"
+        />
+        <div v-else class="flex flex-1 flex-col overflow-hidden">
           <div class="flex justify-end gap-2 px-5 pt-3">
             <Link
               value=""
@@ -163,6 +170,8 @@ import OrganizationsIcon from '@/components/Icons/OrganizationsIcon.vue'
 import ContactsIcon from '@/components/Icons/ContactsIcon.vue'
 import ContactModal from '@/components/Modals/ContactModal.vue'
 import OrganizationModal from '@/components/Modals/OrganizationModal.vue'
+import FactsMapPanel from '@/components/FactsMapPanel.vue'
+import LucideMapPin from '~icons/lucide/map-pin'
 import {
   Breadcrumbs,
   Avatar,
@@ -182,6 +191,7 @@ const props = defineProps({
 })
 
 const softwareName = ref('')
+const primaryOrg = ref('')
 const orgChild = ref([])
 const contactChild = ref([])
 const contactDetails = ref({})
@@ -199,6 +209,8 @@ async function loadSoftware() {
     name: props.softwareId,
   })
   softwareName.value = doc.software_name || doc.name
+  primaryOrg.value =
+    doc.organization || (doc.organizations && doc.organizations[0]?.organization) || ''
   orgChild.value = doc.organizations || []
   contactChild.value = doc.contacts || []
   await loadContactDetails()
@@ -229,6 +241,8 @@ const breadcrumbs = computed(() => [
   { label: softwareName.value, route: { name: 'SoftwareDetail', params: { softwareId: props.softwareId } } },
 ])
 
+const softwareMapQuery = computed(() => primaryOrg.value || '')
+
 const tabIndex = ref(0)
 const tabs = [
   {
@@ -240,6 +254,11 @@ const tabs = [
     label: 'Contacts',
     icon: ContactsIcon,
     count: computed(() => contactChild.value.length),
+  },
+  {
+    label: 'Datos',
+    icon: LucideMapPin,
+    count: computed(() => ''),
   },
 ]
 
