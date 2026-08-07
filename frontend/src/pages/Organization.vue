@@ -187,6 +187,55 @@
         </div>
       </div>
 
+      <!-- Widget: Campañas BDR -->
+      <div class="shrink-0 rounded-lg border">
+        <div
+          class="flex items-center justify-between gap-2 border-b px-4 py-3"
+        >
+          <div
+            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
+          >
+            <FeatherIcon name="target" class="h-5" />
+            {{ __('Campañas BDR') }}
+            <Badge variant="subtle" theme="gray" size="sm">
+              {{ bdrCampaigns.length }}
+            </Badge>
+          </div>
+          <Dropdown v-if="bdrAddOptions.length" :options="bdrAddOptions">
+            <Button variant="outline">
+              <template #prefix>
+                <FeatherIcon name="plus" class="h-4" />
+              </template>
+              {{ __('Agregar Campaña BDR') }}
+            </Button>
+          </Dropdown>
+        </div>
+        <div class="flex flex-wrap gap-2 p-3">
+          <span
+            v-for="c in bdrCampaigns"
+            :key="c"
+            class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
+          >
+            {{ c }}
+            <button
+              :title="__('Quitar')"
+              @click="removeBdr(c)"
+            >
+              <FeatherIcon
+                name="x"
+                class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6"
+              />
+            </button>
+          </span>
+          <span
+            v-if="!bdrCampaigns.length"
+            class="py-1 text-sm text-ink-gray-4"
+          >
+            {{ __('Sin campañas asignadas') }}
+          </span>
+        </div>
+      </div>
+
       <!-- Widget: Oportunidades -->
       <div
         :class="
@@ -903,6 +952,48 @@ const mapUrl = computed(
     encodeURIComponent(mapQuery.value) +
     '&output=embed&z=6',
 )
+
+// Campañas BDR (multi)
+const BDR_OPTIONS = [
+  'A&D',
+  'MINERÍA Argentina',
+  'MINERÍA Chile',
+  'NUCLEAR',
+  'CAMIONES-BUS',
+  'EQUIPOS INDUSTRIALES',
+  'CONS. MASIVO',
+  'IND. SALMONES',
+  'OIL&GAS',
+  'HIGH TECH',
+  'EQUIPOS MEDICOS',
+  'ASIMET',
+]
+const bdrCampaigns = computed(() => {
+  try {
+    const v = JSON.parse(organization.doc?.custom_campanas_bdr_list || '[]')
+    return Array.isArray(v) ? v : []
+  } catch (e) {
+    return []
+  }
+})
+const bdrAddOptions = computed(() =>
+  BDR_OPTIONS.filter((o) => !bdrCampaigns.value.includes(o)).map((o) => ({
+    label: o,
+    onClick: () => addBdr(o),
+  })),
+)
+function saveBdr(list) {
+  organization.setValue
+    .submit({ custom_campanas_bdr_list: JSON.stringify(list) })
+    .catch(() => toast.error(__('No se pudo guardar la campaña')))
+}
+function addBdr(c) {
+  if (bdrCampaigns.value.includes(c)) return
+  saveBdr([...bdrCampaigns.value, c])
+}
+function removeBdr(c) {
+  saveBdr(bdrCampaigns.value.filter((x) => x !== c))
+}
 
 // Plataformas y Comunidades (links)
 const plataformaLinks = computed(() => {
