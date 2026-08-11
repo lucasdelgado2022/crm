@@ -58,10 +58,16 @@ const props = defineProps({
   icon: { type: [Object, String, Function], default: null },
   label: { type: String, default: '' },
   to: { type: [Object, String], default: null },
+  href: { type: String, default: null },
   isCollapsed: { type: Boolean, default: false },
 })
 
 function handleClick() {
+  if (props.href) {
+    window.open(props.href, '_blank')
+    if (isMobileView.value) mobileSidebarOpened.value = false
+    return
+  }
   if (!props.to) return
   if (typeof props.to === 'object') {
     router.push(props.to)

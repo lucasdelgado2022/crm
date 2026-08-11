@@ -13,7 +13,7 @@
             @update="updateFilter"
           />
           <GroupBy
-            v-if="route.params.viewType === 'group_by'"
+            v-if="route.params.viewType !== 'kanban'"
             v-model="list"
             :doctype="doctype"
             :hideLabel="isMobileView"
@@ -162,7 +162,7 @@
           @click="reload()"
         />
         <GroupBy
-          v-if="route.params.viewType === 'group_by'"
+          v-if="route.params.viewType !== 'kanban'"
           v-model="list"
           :doctype="doctype"
           @update="updateGroupBy"
@@ -492,13 +492,23 @@ watch(updatedPageCount, (value) => {
   updatePageLength(value)
 })
 
+// Re-fetch cuando cambia el campo de agrupado por URL (?groupBy=)
+watch(
+  () => route.query.groupBy,
+  () => {
+    list.value.params = getParams()
+    list.value.reload()
+  },
+)
+
 function getParams() {
   let _view = getView(route.query.view, route.params.viewType, props.doctype)
   const view_name = _view?.name || ''
   const view_type = _view?.type || route.params.viewType || 'list'
   const filters = (_view?.filters && JSON.parse(_view.filters)) || {}
   const order_by = _view?.order_by || 'modified desc'
-  const group_by_field = _view?.group_by_field || 'owner'
+  const group_by_field =
+    route.query.groupBy || _view?.group_by_field || 'owner'
   const columns = _view?.columns || ''
   const rows = _view?.rows || ''
   const column_field = _view?.column_field || 'status'
@@ -940,18 +950,18 @@ function updateSort(order_by) {
 }
 
 function updateGroupBy(group_by_field) {
-  viewUpdated.value = true
-  if (!defaultParams.value) {
-    defaultParams.value = getParams()
+  // Manejo por URL: agrupar = ir a la vista group_by con ?groupBy=<campo>;
+  // limpiar = volver a lista. Así el selector funciona desde cualquier vista.
+  const params = { ...route.params }
+  const query = { ...route.query }
+  if (group_by_field) {
+    params.viewType = 'group_by'
+    query.groupBy = group_by_field
+  } else {
+    if (route.params.viewType === 'group_by') params.viewType = 'list'
+    delete query.groupBy
   }
-  list.value.params = defaultParams.value
-  list.value.params.view.group_by_field = group_by_field
-  view.value.group_by_field = group_by_field
-  list.value.reload()
-
-  if (!route.query.view) {
-    createOrUpdateStandardView()
-  }
+  router.push({ name: route.name, params, query })
 }
 
 function updateColumns(obj) {

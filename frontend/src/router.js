@@ -109,6 +109,27 @@ const routes = [
     props: true,
   },
   {
+    path: '/partners/view/:viewType?',
+    name: 'Partners',
+    component: () => import('@/pages/Partners.vue'),
+  },
+  {
+    path: '/partners/:partnerId',
+    name: 'PartnerDetail',
+    component: () => import('@/pages/PartnerDetail.vue'),
+    props: true,
+  },
+  {
+    path: '/procesos-tecnologias/view/:viewType?',
+    name: 'ProcesosTecnologias',
+    component: () => import('@/pages/ProcesosTecnologias.vue'),
+  },
+  {
+    path: '/pipeline',
+    name: 'Pipeline',
+    component: () => import('@/pages/Pipeline.vue'),
+  },
+  {
     path: '/attachments',
     name: 'Attachments',
     component: () => import('@/pages/Attachments.vue'),
