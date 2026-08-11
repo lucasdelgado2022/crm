@@ -46,29 +46,39 @@
         <template #prefix>
           <div
             v-if="column.key === '_assign'"
-            class="flex items-center -space-x-1.5 truncate"
+            class="flex items-center gap-1.5 truncate"
           >
             <Tooltip
               v-if="ownerMap[row.name] || row.deal_owner"
               :text="__('Responsable') + ': ' + userLabel(ownerMap[row.name] || row.deal_owner)"
             >
-              <div class="rounded-full ring-2 ring-blue-500">
-                <Avatar
-                  :image="userImage(ownerMap[row.name] || row.deal_owner)"
-                  :label="userLabel(ownerMap[row.name] || row.deal_owner)"
-                  size="sm"
-                />
+              <div class="flex items-center gap-1.5 truncate">
+                <div class="rounded-full ring-2 ring-blue-500">
+                  <Avatar
+                    :image="userImage(ownerMap[row.name] || row.deal_owner)"
+                    :label="userLabel(ownerMap[row.name] || row.deal_owner)"
+                    size="sm"
+                  />
+                </div>
+                <span class="truncate text-base text-ink-gray-8">
+                  {{ userLabel(ownerMap[row.name] || row.deal_owner) }}
+                </span>
               </div>
             </Tooltip>
-            <Tooltip
-              v-for="u in apoyoMap[row.name] || []"
-              :key="u"
-              :text="__('Apoyo') + ': ' + userLabel(u)"
+            <div
+              v-if="(apoyoMap[row.name] || []).length"
+              class="flex shrink-0 items-center -space-x-1.5"
             >
-              <div class="rounded-full ring-2 ring-sky-300">
-                <Avatar :image="userImage(u)" :label="userLabel(u)" size="sm" />
-              </div>
-            </Tooltip>
+              <Tooltip
+                v-for="u in apoyoMap[row.name] || []"
+                :key="u"
+                :text="__('Apoyo') + ': ' + userLabel(u)"
+              >
+                <div class="rounded-full ring-2 ring-sky-300">
+                  <Avatar :image="userImage(u)" :label="userLabel(u)" size="sm" />
+                </div>
+              </Tooltip>
+            </div>
           </div>
           <div v-else-if="column.key === 'status'">
             <IndicatorIcon :class="item.color" />

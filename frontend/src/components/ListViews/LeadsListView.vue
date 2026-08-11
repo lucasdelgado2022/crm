@@ -46,22 +46,39 @@
         <template #prefix>
           <div
             v-if="column.key === '_assign'"
-            class="flex items-center truncate"
+            class="flex items-center gap-1.5 truncate"
           >
-            <MultipleAvatar
-              :avatars="item"
-              size="sm"
-              @click="
-                (event) =>
-                  emit('applyFilter', {
-                    event,
-                    idx,
-                    column,
-                    item,
-                    firstColumn: columns[0],
-                  })
-              "
-            />
+            <Tooltip
+              v-if="ownerMap[row.name] || row.lead_owner"
+              :text="__('Responsable') + ': ' + userLabel(ownerMap[row.name] || row.lead_owner)"
+            >
+              <div class="flex items-center gap-1.5 truncate">
+                <div class="rounded-full ring-2 ring-blue-500">
+                  <Avatar
+                    :image="userImage(ownerMap[row.name] || row.lead_owner)"
+                    :label="userLabel(ownerMap[row.name] || row.lead_owner)"
+                    size="sm"
+                  />
+                </div>
+                <span class="truncate text-base text-ink-gray-8">
+                  {{ userLabel(ownerMap[row.name] || row.lead_owner) }}
+                </span>
+              </div>
+            </Tooltip>
+            <div
+              v-if="otherAssignees(item, ownerMap[row.name] || row.lead_owner).length"
+              class="flex shrink-0 items-center -space-x-1.5"
+            >
+              <Tooltip
+                v-for="u in otherAssignees(item, ownerMap[row.name] || row.lead_owner)"
+                :key="u.name"
+                :text="userLabel(u.name)"
+              >
+                <div class="rounded-full ring-2 ring-sky-300">
+                  <Avatar :image="u.image" :label="u.label" size="sm" />
+                </div>
+              </Tooltip>
+            </div>
           </div>
           <div v-else-if="column.key === 'status'">
             <IndicatorIcon :class="item.color" />
@@ -287,10 +304,25 @@ import {
   call,
 } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
+import { usersStore } from '@/stores/users'
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
+const { getUser } = usersStore()
+function userLabel(u) {
+  if (!u) return ''
+  return getUser(u)?.full_name || u
+}
+function userImage(u) {
+  if (!u) return ''
+  return getUser(u)?.user_image || ''
+}
+function otherAssignees(assignees, owner) {
+  return (assignees || []).filter((u) => u && u.name && u.name !== owner)
+}
+
 const ageMap = ref({})
+const ownerMap = ref({})
 const contactMap = ref({})
 function daysSince(dt) {
   if (!dt) return null
@@ -315,26 +347,30 @@ async function loadAges(rows) {
   if (!names.length) {
     ageMap.value = {}
     contactMap.value = {}
+    ownerMap.value = {}
     return
   }
   try {
     const leads = await call('frappe.client.get_list', {
       doctype: 'CRM Lead',
       filters: { name: ['in', names] },
-      fields: ['name', 'creation', 'email', 'mobile_no'],
+      fields: ['name', 'creation', 'email', 'mobile_no', 'lead_owner'],
       limit_page_length: 0,
     })
     const gm = {}
     const cm = {}
+    const om = {}
     for (const r of leads || []) {
       gm[r.name] = daysSince(r.creation)
       cm[r.name] = {
         email: r.email,
         phone: r.mobile_no,
       }
+      om[r.name] = r.lead_owner
     }
     ageMap.value = gm
     contactMap.value = cm
+    ownerMap.value = om
   } catch (e) {
     // silencioso
   }
