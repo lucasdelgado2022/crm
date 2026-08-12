@@ -80,6 +80,7 @@ doctype_js = {
 
 website_route_rules = [
 	{"from_route": "/crm/<path:app_path>", "to_route": "crm"},
+	{"from_route": "/crm-form/<route>", "to_route": "crm_form"},
 ]
 
 # Generators
@@ -170,6 +171,9 @@ doc_events = {
 	"Contact": {
 		"validate": ["crm.api.contact.validate"],
 	},
+	"Notification Log": {
+		"before_insert": ["crm.extends.notification_log.before_insert"],
+	},
 	"ToDo": {
 		"after_insert": ["crm.api.todo.after_insert"],
 		"on_update": ["crm.api.todo.on_update"],
@@ -229,7 +233,9 @@ scheduler_events = {
 	"hourly": ["crm.api.event.trigger_hourly_event_notifications"],
 	"daily": [
 		"crm.api.event.trigger_daily_event_notifications",
+		"crm.fcrm.doctype.crm_invitation.crm_invitation.expire_invitations",
 		"crm.fcrm.doctype.crm_view_settings.crm_view_settings.clear_old_versions",
+		"crm.telemetry.capture_feature_state",
 	],
 	"weekly": ["crm.api.event.trigger_weekly_event_notifications"],
 	"daily_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_daily"],
@@ -316,6 +322,7 @@ after_migrate = [
 	"crm.api.whatsapp.add_roles",
 	"crm.domain_enrichment.install.seed_default_rules_and_mappings",
 	"crm.install.add_default_scripts",
+	"crm.install.add_web_form_custom_fields",
 ]
 
 standard_dropdown_items = [

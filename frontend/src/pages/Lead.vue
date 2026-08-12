@@ -314,6 +314,7 @@ import {
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useActiveTabManager } from '@/composables/useActiveTabManager'
+import { useUnsavedChangesWarning } from '@/composables/useUnsavedChangesWarning'
 
 const { brand } = getSettings()
 const { $dialog, $socket, makeCall } = globalStore()
@@ -358,9 +359,10 @@ const canDelete = computed(() => permissions.data?.permissions?.delete || false)
 const doc = computed(() => document.doc || {})
 
 const leadMapQuery = computed(() => {
-  const d = doc.value || {}
+  const d = document.doc || {}
   return [d.organization || d.lead_name, d.territory].filter(Boolean).join(', ')
 })
+useUnsavedChangesWarning(() => document.isDirty)
 
 onMounted(async () => {
   if (document.doc) await triggerOnRender()
@@ -422,7 +424,11 @@ const breadcrumbs = computed(() => {
 
   items.push({
     label: title.value,
-    route: { name: 'Lead', params: { leadId: props.leadId } },
+    route: {
+      name: 'Lead',
+      params: { leadId: props.leadId },
+      query: route.query,
+    },
   })
   return items
 })

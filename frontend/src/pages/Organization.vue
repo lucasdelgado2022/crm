@@ -1057,6 +1057,7 @@ const breadcrumbs = computed(() => {
     route: {
       name: 'Organization',
       params: { organizationId: props.organizationId },
+      query: route.query,
     },
   })
   return items
@@ -1170,6 +1171,8 @@ const leads = createListResource({
     'first_name',
     'last_name',
     'organization',
+    'currency',
+    'deal_value',
     'status',
     'email',
     'mobile_no',
@@ -1387,7 +1390,7 @@ function getDealRowObject(deal) {
       label: deal.organization,
       logo: organization.doc?.organization_logo,
     },
-    annual_revenue: getFormattedCurrency('annual_revenue', deal),
+    deal_value: getFormattedCurrency('deal_value', deal),
     status: {
       label: deal.status,
       color: getDealStatus(deal.status)?.color,

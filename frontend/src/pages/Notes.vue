@@ -41,6 +41,11 @@
           <Dropdown
             :options="[
               {
+                label: __('Edit'),
+                icon: 'edit-2',
+                onClick: () => editNote(note.name),
+              },
+              {
                 label: __('Delete'),
                 icon: 'trash-2',
                 onClick: () => deleteNote(note.name),
@@ -49,7 +54,7 @@
           >
             <Button
               icon="lucide-more-horizontal"
-              variant="ghosted"
+              variant="ghost"
               class="hover:bg-surface-base"
               @click.stop
             />
