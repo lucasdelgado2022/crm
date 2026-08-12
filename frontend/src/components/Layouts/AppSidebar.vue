@@ -80,7 +80,7 @@
                 :to="link.to"
                 :label="__(link.label)"
                 :active="activeItem === link.key"
-                @click="selectItem($event, link.key)"
+                @click="selectItem($event, link)"
               >
                 <template #prefix>
                   <Icon :icon="link.icon" class="size-4 text-ink-gray-7" />
@@ -174,6 +174,17 @@
 <script setup>
 import BrushCleaningIcon from '~icons/lucide/brush-cleaning'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
+import LucideBell from '~icons/lucide/bell'
+import LucidePackage from '~icons/lucide/package'
+import LucideFilter from '~icons/lucide/filter'
+import LucideHandshake from '~icons/lucide/handshake'
+import LucideWorkflow from '~icons/lucide/workflow'
+import LucideLifeBuoy from '~icons/lucide/life-buoy'
+import LucideGraduationCap from '~icons/lucide/graduation-cap'
+import LucideCalendarClock from '~icons/lucide/calendar-clock'
+import LucideChartColumn from '~icons/lucide/chart-column'
+import SoftwareIcon from '@/components/Icons/SoftwareIcon.vue'
+import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import InviteIcon from '@/components/Icons/InviteIcon.vue'
 import ConvertIcon from '@/components/Icons/ConvertIcon.vue'
@@ -253,12 +264,6 @@ const isDemoSite = ref(window.is_demo_site)
 
 const links = [
   {
-    label: 'Dashboard',
-    icon: LucideLayoutDashboard,
-    to: 'Dashboard',
-    condition: () => !props.mobile,
-  },
-  {
     label: 'Leads',
     icon: LeadsIcon,
     to: 'Leads',
@@ -279,6 +284,51 @@ const links = [
     to: 'Organizations',
   },
   {
+    label: 'Oferta Comercial',
+    icon: LucidePackage,
+    to: 'OfertaComercial',
+  },
+]
+
+const moreLinks = [
+  {
+    label: 'Dashboard',
+    icon: LucideLayoutDashboard,
+    to: 'Dashboard',
+    condition: () => !props.mobile,
+  },
+  {
+    label: 'Alertas',
+    icon: LucideBell,
+    to: 'Alertas',
+  },
+  {
+    label: 'Software',
+    icon: SoftwareIcon,
+    to: 'Software',
+  },
+  {
+    label: 'Partners',
+    icon: LucideHandshake,
+    to: 'Partners',
+  },
+  {
+    label: 'Procesos / Tecnologías',
+    icon: LucideWorkflow,
+    to: 'ProcesosTecnologias',
+  },
+  {
+    label: 'Pipeline',
+    icon: LucideFilter,
+    to: 'Pipeline',
+  },
+  {
+    label: 'Ventas por Mes',
+    icon: LucideChartColumn,
+    to: 'VentasPorMes',
+    condition: () => !props.mobile,
+  },
+  {
     label: 'Notes',
     icon: NoteIcon,
     to: 'Notes',
@@ -295,11 +345,49 @@ const links = [
     condition: () => !props.mobile,
   },
   {
-    label: 'Call Logs',
-    icon: PhoneIcon,
-    to: 'Call Logs',
+    label: 'Attachments',
+    icon: AttachmentIcon,
+    to: 'Attachments',
+  },
+  {
+    label: 'Helpdesk',
+    icon: LucideLifeBuoy,
+    href: '/helpdesk',
+  },
+  {
+    label: 'LMS',
+    icon: LucideGraduationCap,
+    href: '/lms',
+  },
+  {
+    label: 'Citas',
+    icon: LucideCalendarClock,
+    href: '/app/appointment',
   },
 ]
+
+function mapLink(link) {
+  if (link.href) {
+    return {
+      label: link.label,
+      icon: link.icon,
+      key: 'ext-' + link.href,
+      href: link.href,
+    }
+  }
+  return {
+    label: link.label,
+    icon: link.icon,
+    key: link.to,
+    to: { name: link.to },
+  }
+}
+
+function filterLinks(arr) {
+  return arr
+    .filter((link) => (link.condition ? link.condition() : true))
+    .map(mapLink)
+}
 
 const allViews = computed(() => {
   let _views = [
@@ -307,19 +395,12 @@ const allViews = computed(() => {
       name: 'All Views',
       hideLabel: true,
       opened: true,
-      views: links
-        .filter((link) => {
-          if (link.condition) {
-            return link.condition()
-          }
-          return true
-        })
-        .map((link) => ({
-          label: link.label,
-          icon: link.icon,
-          key: link.to,
-          to: { name: link.to },
-        })),
+      views: filterLinks(links),
+    },
+    {
+      name: 'Más',
+      opened: false,
+      views: filterLinks(moreLinks),
     },
   ]
   if (getPublicViews().length) {
@@ -387,7 +468,7 @@ function currentRouteKey() {
 // move the highlight here.
 const activeItem = ref(currentRouteKey())
 
-function selectItem(event, key) {
+function selectItem(event, link) {
   if (
     event.metaKey ||
     event.ctrlKey ||
@@ -397,7 +478,14 @@ function selectItem(event, key) {
   ) {
     return
   }
-  activeItem.value = key
+  if (link.href) {
+    window.open(link.href, '_blank')
+    if (props.mobile) {
+      mobileSidebarOpened.value = false
+    }
+    return
+  }
+  activeItem.value = link.key
   // Selecting the row for the route already open leaves the URL unchanged, so
   // the drawer's navigation watcher never fires. Close it here too.
   if (props.mobile) {
