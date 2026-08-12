@@ -22,6 +22,11 @@
              active row's shadow. Widen the scroll box to the sidebar edges and
              pad the content back in so the shadow has room. -->
         <div class="-mx-2 mt-2 flex flex-1 flex-col gap-1 overflow-y-auto px-2">
+          <SidebarItem :label="__('Buscar')" @click="showSearch = true">
+            <template #prefix>
+              <SearchIcon class="size-4 text-ink-gray-7" />
+            </template>
+          </SidebarItem>
           <SidebarItem
             id="notifications-btn"
             :label="__('Notifications')"
@@ -153,6 +158,7 @@
 
   <template v-if="!mobile">
     <Settings />
+    <GlobalSearch v-model="showSearch" />
     <HelpModal
       v-if="showHelpModal"
       v-model="showHelpModal"
@@ -185,6 +191,8 @@ import LucideCalendarClock from '~icons/lucide/calendar-clock'
 import LucideChartColumn from '~icons/lucide/chart-column'
 import SoftwareIcon from '@/components/Icons/SoftwareIcon.vue'
 import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
+import GlobalSearch from '@/components/GlobalSearch.vue'
+import SearchIcon from '@/components/Icons/SearchIcon.vue'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import InviteIcon from '@/components/Icons/InviteIcon.vue'
 import ConvertIcon from '@/components/Icons/ConvertIcon.vue'
@@ -252,6 +260,15 @@ const { toggle: toggleNotificationPanel } = notificationsStore()
 const { capture } = useTelemetry()
 const { clearDemoData, isDemoDataCreated } = useDemoData()
 const { send } = useBroadcast()
+
+const showSearch = ref(false)
+function onSearchKeydown(e) {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault()
+    showSearch.value = true
+  }
+}
+onMounted(() => window.addEventListener('keydown', onSearchKeydown))
 
 const isSidebarCollapsed = useStorage('isSidebarCollapsed', false)
 
