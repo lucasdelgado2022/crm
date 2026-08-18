@@ -663,6 +663,12 @@ const tabs = computed(() => {
       label: __('Roadmap'),
       icon: 'lucide-milestone',
     },
+    {
+      name: 'ErpDocs',
+      label: __('Documentos ERP'),
+      icon: 'lucide-file-text',
+      condition: () => getDealStatus(document.doc?.status)?.type === 'Won',
+    },
     // --- secundarios (agrupados en "Más") ---
     {
       name: 'Comisiones',
