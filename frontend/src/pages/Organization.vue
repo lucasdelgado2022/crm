@@ -148,6 +148,26 @@
       </div>
     </Resizer>
     <div class="flex flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5">
+      <!-- Barra de pestañas del perfil -->
+      <div
+        class="flex shrink-0 items-center gap-1 border-b border-outline-gray-2"
+      >
+        <button
+          v-for="t in orgTabs"
+          :key="t.name"
+          class="border-b-2 px-3 py-2 text-base transition-colors"
+          :class="
+            orgTab === t.name
+              ? 'border-ink-gray-9 font-medium text-ink-gray-9'
+              : 'border-transparent text-ink-gray-5 hover:text-ink-gray-8'
+          "
+          @click="orgTab = t.name"
+        >
+          {{ __(t.label) }}
+        </button>
+      </div>
+
+      <template v-if="orgTab === 'general'">
       <!-- Widget: Plataformas y Comunidades -->
       <div class="shrink-0 rounded-lg border">
         <div
@@ -600,7 +620,9 @@
           <EmptyState v-else :icon="SoftwareIcon" :name="__('Software')" />
         </div>
       </div>
+      </template>
 
+      <template v-if="orgTab === 'datos'">
       <!-- Fila: Datos/Hechos + Ubicación (paralelos) -->
       <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
       <!-- Widget: Datos / Hechos (con investigacion IA) -->
@@ -748,6 +770,7 @@
         </div>
       </div>
       </div>
+      </template>
     </div>
   </div>
   <ErrorPage
@@ -867,6 +890,12 @@ const errorMessage = ref('')
 const showDeleteLinkedDocModal = ref(false)
 
 // Maximizar widget (deja solo los encabezados de los demas)
+const orgTab = ref('general')
+const orgTabs = [
+  { name: 'general', label: 'General' },
+  { name: 'datos', label: 'Datos y Mapa' },
+]
+
 const maxWidget = ref(null)
 function toggleMax(key) {
   maxWidget.value = maxWidget.value === key ? null : key
