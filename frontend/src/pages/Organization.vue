@@ -542,82 +542,103 @@
         </div>
       </div>
 
-      <!-- Widget: Software -->
-      <div
-        :class="
-          widgetShown('Software')
-            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
-            : 'flex shrink-0 flex-col rounded-lg border'
-        "
-      >
-        <div
-          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
-        >
-          <div
-            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
-          >
-            <SoftwareIcon class="h-5" />
-            {{ __('Software') }}
-            <Badge variant="subtle" theme="gray" size="sm">
-              {{ softwareRows.length }}
-            </Badge>
-          </div>
-          <div class="flex gap-2">
+      <!-- Fila: Software / Partner / Procesos (chips) -->
+      <div class="grid shrink-0 grid-cols-1 gap-4 lg:grid-cols-3">
+        <!-- Software -->
+        <div class="flex flex-col rounded-lg border">
+          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
+              <SoftwareIcon class="h-5" />
+              {{ __('Software') }}
+              <Badge variant="subtle" theme="gray" size="sm">{{ software.data?.length || 0 }}</Badge>
+            </div>
             <Dropdown :options="[...softwareLinkOptions, ...softwareCreateOptions]">
-              <Button variant="outline">
-                <template #prefix>
-                  <FeatherIcon name="link" class="h-4" />
-                </template>
-                {{ __('Add') }}
-                <template #suffix>
-                  <FeatherIcon name="chevron-down" class="h-4" />
-                </template>
+              <Button variant="ghost">
+                <template #icon><FeatherIcon name="plus" class="h-4" /></template>
               </Button>
             </Dropdown>
-            <Button
-              variant="ghost"
-              :tooltip="
-                maxWidget === 'Software' ? __('Restaurar') : __('Maximizar')
-              "
-              @click="toggleMax('Software')"
+          </div>
+          <div class="flex flex-wrap gap-2 p-3">
+            <span
+              v-for="sw in (software.data || [])"
+              :key="sw.name"
+              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
             >
-              <template #icon>
-                <component
-                  :is="maxWidget === 'Software' ? MinimizeIcon : MaximizeIcon"
-                  class="h-4 w-4"
-                />
-              </template>
-            </Button>
+              {{ sw.software_name }}
+              <button :title="__('Quitar')" @click="removeSoftwareChip(sw)">
+                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
+              </button>
+            </span>
+            <span v-if="!(software.data && software.data.length)" class="py-1 text-sm text-ink-gray-4">
+              {{ __('Sin software') }}
+            </span>
           </div>
         </div>
-        <div
-          v-show="widgetShown('Software')"
-          class="min-h-0 flex-1 overflow-y-auto"
-        >
-          <ListView
-            v-if="softwareRows.length"
-            class="px-4 py-2"
-            :rows="softwareRows"
-            :columns="softwareColumns"
-            row-key="name"
-            :options="{ selectable: false, showTooltip: false }"
-          >
-            <template #cell="{ item, row, column }">
-              <Button
-                v-if="column.key === '_unlink'"
-                variant="ghost"
-                class="!h-6 !w-6"
-                :tooltip="__('Desvincular')"
-                @click.stop.prevent="unlinkSoftware(row)"
-              >
-                <FeatherIcon name="x" class="h-4 w-4 text-ink-gray-6" />
-              </Button>
-              <div v-else class="truncate text-base">
-                {{ item?.timeAgo || item?.label || item }}
-              </div>
-            </template>
-          </ListView>
-          <EmptyState v-else :icon="SoftwareIcon" :name="__('Software')" />
+
+        <!-- Partner -->
+        <div class="flex flex-col rounded-lg border">
+          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
+              <FeatherIcon name="briefcase" class="h-5" />
+              {{ __('Partner') }}
+              <Badge variant="subtle" theme="gray" size="sm">{{ orgPartners.data?.length || 0 }}</Badge>
+            </div>
+            <Link value="" doctype="CRM Partner" @change="(v) => addPartner(v)">
+              <template #target="{ togglePopover }">
+                <Button variant="ghost" @click="togglePopover()">
+                  <template #icon><FeatherIcon name="plus" class="h-4" /></template>
+                </Button>
+              </template>
+            </Link>
+          </div>
+          <div class="flex flex-wrap gap-2 p-3">
+            <span
+              v-for="p in (orgPartners.data || [])"
+              :key="p.name"
+              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
+            >
+              {{ p.parent }}
+              <button :title="__('Quitar')" @click="removePartner(p)">
+                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
+              </button>
+            </span>
+            <span v-if="!(orgPartners.data && orgPartners.data.length)" class="py-1 text-sm text-ink-gray-4">
+              {{ __('Sin partners') }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Procesos / Tecnologías -->
+        <div class="flex flex-col rounded-lg border">
+          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
+              <FeatherIcon name="cpu" class="h-5" />
+              {{ __('Procesos / Tecnologías') }}
+              <Badge variant="subtle" theme="gray" size="sm">{{ orgProcesos.data?.length || 0 }}</Badge>
+            </div>
+            <Link value="" doctype="CRM Proceso Tecnologia" @change="(v) => addProceso(v)">
+              <template #target="{ togglePopover }">
+                <Button variant="ghost" @click="togglePopover()">
+                  <template #icon><FeatherIcon name="plus" class="h-4" /></template>
+                </Button>
+              </template>
+            </Link>
+          </div>
+          <div class="flex flex-wrap gap-2 p-3">
+            <span
+              v-for="pr in (orgProcesos.data || [])"
+              :key="pr.name"
+              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
+            >
+              {{ pr.proceso }}
+              <button :title="__('Quitar')" @click="removeProceso(pr)">
+                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
+              </button>
+            </span>
+            <span v-if="!(orgProcesos.data && orgProcesos.data.length)" class="py-1 text-sm text-ink-gray-4">
+              {{ __('Sin procesos') }}
+            </span>
+          </div>
         </div>
       </div>
       </template>
@@ -1335,6 +1356,116 @@ const contactRows = computed(() => {
     data = data.filter((c) => (c.custom_rol || '—') === contactRolFilter.value)
   return data.map(getContactRowObject)
 })
+const orgPartners = createListResource({
+  type: 'list',
+  doctype: 'CRM Partner Organization',
+  cache: ['org-partners', props.organizationId],
+  filters: { organization: props.organizationId, parenttype: 'CRM Partner' },
+  fields: ['name', 'parent'],
+  pageLength: 99,
+  auto: true,
+})
+const orgProcesos = createListResource({
+  type: 'list',
+  doctype: 'CRM Organization Proceso',
+  cache: ['org-procesos', props.organizationId],
+  filters: { parenttype: 'CRM Organization', parent: props.organizationId },
+  fields: ['name', 'proceso'],
+  pageLength: 99,
+  auto: true,
+})
+
+async function removeSoftwareChip(sw) {
+  try {
+    const doc = await call('frappe.client.get', { doctype: 'Software', name: sw.name })
+    doc.organizations = (doc.organizations || []).filter(
+      (r) => r.organization !== props.organizationId,
+    )
+    await call('frappe.client.save', { doc })
+    toast.success(__('Desvinculado'))
+    software.reload()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al desvincular'))
+  }
+}
+
+async function addPartner(name) {
+  if (!name) return
+  if ((orgPartners.data || []).some((r) => r.parent === name)) {
+    toast.error(__('Ya vinculado'))
+    return
+  }
+  try {
+    await call('frappe.client.insert', {
+      doc: {
+        doctype: 'CRM Partner Organization',
+        parenttype: 'CRM Partner',
+        parent: name,
+        parentfield: 'organizations',
+        organization: props.organizationId,
+      },
+    })
+    toast.success(__('Partner vinculado'))
+    orgPartners.reload()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al vincular'))
+  }
+}
+
+async function removePartner(row) {
+  try {
+    const p = await call('frappe.client.get', { doctype: 'CRM Partner', name: row.parent })
+    p.organizations = (p.organizations || []).filter(
+      (r) => r.organization !== props.organizationId,
+    )
+    await call('frappe.client.save', { doc: p })
+    toast.success(__('Desvinculado'))
+    orgPartners.reload()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al desvincular'))
+  }
+}
+
+async function addProceso(name) {
+  if (!name) return
+  if ((orgProcesos.data || []).some((r) => r.proceso === name)) {
+    toast.error(__('Ya agregado'))
+    return
+  }
+  try {
+    await call('frappe.client.insert', {
+      doc: {
+        doctype: 'CRM Organization Proceso',
+        parenttype: 'CRM Organization',
+        parent: props.organizationId,
+        parentfield: 'custom_procesos_tecnologias',
+        proceso: name,
+      },
+    })
+    toast.success(__('Agregado'))
+    orgProcesos.reload()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al agregar'))
+  }
+}
+
+async function removeProceso(row) {
+  try {
+    const o = await call('frappe.client.get', {
+      doctype: 'CRM Organization',
+      name: props.organizationId,
+    })
+    o.custom_procesos_tecnologias = (o.custom_procesos_tecnologias || []).filter(
+      (r) => r.proceso !== row.proceso,
+    )
+    await call('frappe.client.save', { doc: o })
+    toast.success(__('Quitado'))
+    orgProcesos.reload()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al quitar'))
+  }
+}
+
 const softwareRows = computed(() => [
   ...(software.data?.map(getSoftwareRowObject) || []),
   ...(procesos.data?.map(getProcesoRowObject) || []),
