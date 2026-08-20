@@ -287,11 +287,18 @@
             <option v-for="c in colorKeys" :key="c" :value="c">{{ c }}</option>
           </select>
         </div>
-        <input
-          v-model="nf.erpnext_item_code"
-          :placeholder="__('Código en ERP (opcional)')"
-          class="h-9 w-full rounded border border-outline-gray-2 bg-surface-base px-3 text-sm text-ink-gray-8 focus:outline-none"
-        />
+        <div>
+          <div class="mb-1 text-xs text-ink-gray-5">
+            {{ __('Producto ERP (opcional)') }}
+          </div>
+          <Link
+            class="form-control"
+            doctype="Item"
+            :value="nf.erpnext_item_code"
+            :placeholder="__('Buscar producto del ERP...')"
+            @change="(v) => (nf.erpnext_item_code = v)"
+          />
+        </div>
         <textarea
           v-model="nf.description"
           rows="3"
