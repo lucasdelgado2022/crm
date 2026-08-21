@@ -168,6 +168,106 @@
       </div>
 
       <template v-if="orgTab === 'general'">
+      <!-- Fila: Software / Partner / Procesos (chips) -->
+      <div class="grid shrink-0 grid-cols-1 gap-4 lg:grid-cols-3">
+        <!-- Software -->
+        <div class="flex flex-col rounded-lg border">
+          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
+              <SoftwareIcon class="h-5" />
+              {{ __('Software') }}
+              <Badge variant="subtle" theme="gray" size="sm">{{ software.data?.length || 0 }}</Badge>
+            </div>
+            <Dropdown :options="[...softwareLinkOptions, ...softwareCreateOptions]">
+              <Button variant="ghost">
+                <template #icon><FeatherIcon name="plus" class="h-4" /></template>
+              </Button>
+            </Dropdown>
+          </div>
+          <div class="flex flex-wrap gap-2 p-3">
+            <span
+              v-for="sw in (software.data || [])"
+              :key="sw.name"
+              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
+            >
+              {{ sw.software_name }}
+              <button :title="__('Quitar')" @click="removeSoftwareChip(sw)">
+                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
+              </button>
+            </span>
+            <span v-if="!(software.data && software.data.length)" class="py-1 text-sm text-ink-gray-4">
+              {{ __('Sin software') }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Partner -->
+        <div class="flex flex-col rounded-lg border">
+          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
+              <FeatherIcon name="briefcase" class="h-5" />
+              {{ __('Partner') }}
+              <Badge variant="subtle" theme="gray" size="sm">{{ orgPartners.data?.length || 0 }}</Badge>
+            </div>
+            <Link value="" doctype="CRM Partner" @change="(v) => addPartner(v)">
+              <template #target="{ togglePopover }">
+                <Button variant="ghost" @click="togglePopover()">
+                  <template #icon><FeatherIcon name="plus" class="h-4" /></template>
+                </Button>
+              </template>
+            </Link>
+          </div>
+          <div class="flex flex-wrap gap-2 p-3">
+            <span
+              v-for="p in (orgPartners.data || [])"
+              :key="p.name"
+              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
+            >
+              {{ p.parent }}
+              <button :title="__('Quitar')" @click="removePartner(p)">
+                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
+              </button>
+            </span>
+            <span v-if="!(orgPartners.data && orgPartners.data.length)" class="py-1 text-sm text-ink-gray-4">
+              {{ __('Sin partners') }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Procesos / Tecnologías -->
+        <div class="flex flex-col rounded-lg border">
+          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
+              <FeatherIcon name="cpu" class="h-5" />
+              {{ __('Procesos / Tecnologías') }}
+              <Badge variant="subtle" theme="gray" size="sm">{{ orgProcesos.data?.length || 0 }}</Badge>
+            </div>
+            <Link value="" doctype="CRM Proceso Tecnologia" @change="(v) => addProceso(v)">
+              <template #target="{ togglePopover }">
+                <Button variant="ghost" @click="togglePopover()">
+                  <template #icon><FeatherIcon name="plus" class="h-4" /></template>
+                </Button>
+              </template>
+            </Link>
+          </div>
+          <div class="flex flex-wrap gap-2 p-3">
+            <span
+              v-for="pr in (orgProcesos.data || [])"
+              :key="pr.name"
+              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
+            >
+              {{ pr.proceso }}
+              <button :title="__('Quitar')" @click="removeProceso(pr)">
+                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
+              </button>
+            </span>
+            <span v-if="!(orgProcesos.data && orgProcesos.data.length)" class="py-1 text-sm text-ink-gray-4">
+              {{ __('Sin procesos') }}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <!-- Widget: Plataformas y Comunidades -->
       <div class="shrink-0 rounded-lg border">
         <div
@@ -338,6 +438,37 @@
                 />
               </template>
             </Button>
+          </div>
+        </div>
+        <div
+          v-show="widgetShown('Deals')"
+          class="grid shrink-0 grid-cols-2 gap-2 border-b p-3 sm:grid-cols-4"
+        >
+          <div class="rounded-lg border bg-surface-gray-1 px-3 py-2">
+            <div class="text-xl font-semibold text-ink-gray-9">
+              {{ dealKpis.open }}
+            </div>
+            <div class="text-xs text-ink-gray-5">{{ __('Activas') }}</div>
+          </div>
+          <div class="rounded-lg border bg-surface-gray-1 px-3 py-2">
+            <div class="text-xl font-semibold text-ink-gray-9">
+              {{ dealKpis.total }}
+            </div>
+            <div class="text-xs text-ink-gray-5">{{ __('Totales') }}</div>
+          </div>
+          <div class="rounded-lg border bg-surface-gray-1 px-3 py-2">
+            <div class="text-xl font-semibold text-ink-gray-9">
+              {{ kpiMoney(dealKpis.pipeline) }}
+            </div>
+            <div class="text-xs text-ink-gray-5">{{ __('Pipeline activo') }}</div>
+          </div>
+          <div class="rounded-lg border bg-surface-gray-1 px-3 py-2">
+            <div class="text-xl font-semibold text-ink-gray-9">
+              {{ dealKpis.winRate }}%
+            </div>
+            <div class="text-xs text-ink-gray-5">
+              {{ __('Ganadas') }} ({{ dealKpis.won }})
+            </div>
           </div>
         </div>
         <div v-show="widgetShown('Deals')" class="min-h-0 flex-1 overflow-y-auto">
@@ -539,106 +670,6 @@
             :options="{ selectable: false, showTooltip: false }"
           />
           <EmptyState v-else :icon="ContactsIcon" :name="__('Contacts')" />
-        </div>
-      </div>
-
-      <!-- Fila: Software / Partner / Procesos (chips) -->
-      <div class="grid shrink-0 grid-cols-1 gap-4 lg:grid-cols-3">
-        <!-- Software -->
-        <div class="flex flex-col rounded-lg border">
-          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
-            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
-              <SoftwareIcon class="h-5" />
-              {{ __('Software') }}
-              <Badge variant="subtle" theme="gray" size="sm">{{ software.data?.length || 0 }}</Badge>
-            </div>
-            <Dropdown :options="[...softwareLinkOptions, ...softwareCreateOptions]">
-              <Button variant="ghost">
-                <template #icon><FeatherIcon name="plus" class="h-4" /></template>
-              </Button>
-            </Dropdown>
-          </div>
-          <div class="flex flex-wrap gap-2 p-3">
-            <span
-              v-for="sw in (software.data || [])"
-              :key="sw.name"
-              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
-            >
-              {{ sw.software_name }}
-              <button :title="__('Quitar')" @click="removeSoftwareChip(sw)">
-                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
-              </button>
-            </span>
-            <span v-if="!(software.data && software.data.length)" class="py-1 text-sm text-ink-gray-4">
-              {{ __('Sin software') }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Partner -->
-        <div class="flex flex-col rounded-lg border">
-          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
-            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
-              <FeatherIcon name="briefcase" class="h-5" />
-              {{ __('Partner') }}
-              <Badge variant="subtle" theme="gray" size="sm">{{ orgPartners.data?.length || 0 }}</Badge>
-            </div>
-            <Link value="" doctype="CRM Partner" @change="(v) => addPartner(v)">
-              <template #target="{ togglePopover }">
-                <Button variant="ghost" @click="togglePopover()">
-                  <template #icon><FeatherIcon name="plus" class="h-4" /></template>
-                </Button>
-              </template>
-            </Link>
-          </div>
-          <div class="flex flex-wrap gap-2 p-3">
-            <span
-              v-for="p in (orgPartners.data || [])"
-              :key="p.name"
-              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
-            >
-              {{ p.parent }}
-              <button :title="__('Quitar')" @click="removePartner(p)">
-                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
-              </button>
-            </span>
-            <span v-if="!(orgPartners.data && orgPartners.data.length)" class="py-1 text-sm text-ink-gray-4">
-              {{ __('Sin partners') }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Procesos / Tecnologías -->
-        <div class="flex flex-col rounded-lg border">
-          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
-            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
-              <FeatherIcon name="cpu" class="h-5" />
-              {{ __('Procesos / Tecnologías') }}
-              <Badge variant="subtle" theme="gray" size="sm">{{ orgProcesos.data?.length || 0 }}</Badge>
-            </div>
-            <Link value="" doctype="CRM Proceso Tecnologia" @change="(v) => addProceso(v)">
-              <template #target="{ togglePopover }">
-                <Button variant="ghost" @click="togglePopover()">
-                  <template #icon><FeatherIcon name="plus" class="h-4" /></template>
-                </Button>
-              </template>
-            </Link>
-          </div>
-          <div class="flex flex-wrap gap-2 p-3">
-            <span
-              v-for="pr in (orgProcesos.data || [])"
-              :key="pr.name"
-              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
-            >
-              {{ pr.proceso }}
-              <button :title="__('Quitar')" @click="removeProceso(pr)">
-                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
-              </button>
-            </span>
-            <span v-if="!(orgProcesos.data && orgProcesos.data.length)" class="py-1 text-sm text-ink-gray-4">
-              {{ __('Sin procesos') }}
-            </span>
-          </div>
         </div>
       </div>
       </template>
@@ -1304,6 +1335,42 @@ const dealStatusCounts = computed(() => {
     }))
     .sort((a, b) => a.position - b.position)
 })
+
+// KPIs reales de oportunidades (mockup): Activas / Totales / Pipeline / % Ganadas
+const DEAL_WON = ['Won', 'Ganado', 'Ganada']
+const DEAL_LOST = ['Lost', 'Perdido', 'Perdida']
+const dealKpis = computed(() => {
+  const data = deals.data || []
+  let won = 0
+  let lost = 0
+  let open = 0
+  let pipeline = 0
+  for (const d of data) {
+    const s = d.status || ''
+    if (DEAL_WON.includes(s)) won++
+    else if (DEAL_LOST.includes(s)) lost++
+    else {
+      open++
+      pipeline += d.annual_revenue || 0
+    }
+  }
+  const decided = won + lost
+  return {
+    total: data.length,
+    open,
+    won,
+    lost,
+    pipeline,
+    winRate: decided ? Math.round((won / decided) * 100) : 0,
+  }
+})
+
+function kpiMoney(v) {
+  const n = v || 0
+  if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M'
+  if (n >= 1e3) return '$' + Math.round(n / 1e3) + 'k'
+  return '$' + n
+}
 
 const dealRows = computed(() => {
   let data = deals.data || []
