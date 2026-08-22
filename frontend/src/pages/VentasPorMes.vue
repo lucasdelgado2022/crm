@@ -139,7 +139,8 @@
         <div
           v-for="(m, i) in monthly"
           :key="i"
-          class="group flex h-full flex-1 flex-col items-center justify-end"
+          class="group flex h-full flex-1 cursor-pointer flex-col items-center justify-end"
+          @click="selectBucket(i)"
         >
           <div
             class="mb-1 text-xs font-medium text-ink-gray-7 opacity-0 transition group-hover:opacity-100"
@@ -147,16 +148,27 @@
             {{ m.total ? moneyShort(m.total) : '' }}
           </div>
           <div
-            class="w-full rounded-t bg-blue-500 transition-all hover:bg-blue-600"
+            class="w-full rounded-t transition-all"
+            :class="
+              selected === i
+                ? 'bg-blue-700 ring-2 ring-blue-300'
+                : 'bg-blue-500 hover:bg-blue-600'
+            "
             :style="{ height: barHeight(m.total) }"
             :title="MONTHS[i] + ': ' + money(m.total) + ' (' + m.count + ')'"
           />
-          <div class="mt-1.5 text-xs text-ink-gray-5">{{ MONTHS[i] }}</div>
+          <div
+            class="mt-1.5 text-xs"
+            :class="selected === i ? 'font-semibold text-ink-gray-8' : 'text-ink-gray-5'"
+          >
+            {{ MONTHS[i] }}
+          </div>
         </div>
         <!-- Barra: oportunidades sin fecha de cierre -->
         <div
           v-if="showNoDate"
-          class="group flex h-full flex-1 flex-col items-center justify-end"
+          class="group flex h-full flex-1 cursor-pointer flex-col items-center justify-end"
+          @click="selectBucket('nodate')"
         >
           <div
             class="mb-1 text-xs font-medium text-ink-gray-7 opacity-0 transition group-hover:opacity-100"
@@ -164,12 +176,87 @@
             {{ noDate.total ? moneyShort(noDate.total) : '' }}
           </div>
           <div
-            class="w-full rounded-t bg-amber-500 transition-all hover:bg-amber-600"
+            class="w-full rounded-t transition-all"
+            :class="
+              selected === 'nodate'
+                ? 'bg-amber-700 ring-2 ring-amber-300'
+                : 'bg-amber-500 hover:bg-amber-600'
+            "
             :style="{ height: barHeight(noDate.total) }"
             :title="'Sin fecha: ' + money(noDate.total) + ' (' + noDate.count + ')'"
           />
-          <div class="mt-1.5 text-xs text-ink-gray-5">{{ __('Sin fecha') }}</div>
+          <div
+            class="mt-1.5 text-xs"
+            :class="
+              selected === 'nodate'
+                ? 'font-semibold text-ink-gray-8'
+                : 'text-ink-gray-5'
+            "
+          >
+            {{ __('Sin fecha') }}
+          </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Lista de oportunidades del bucket seleccionado -->
+    <div v-if="selected !== null" class="mt-5 rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <div class="text-sm font-semibold text-ink-gray-8">
+          {{ __('Oportunidades') }}: {{ selectedLabel }}
+          <span class="font-normal text-ink-gray-5"
+            >({{ selectedDeals.length }})</span
+          >
+        </div>
+        <button
+          class="text-sm text-ink-gray-5 hover:text-ink-gray-8"
+          @click="selected = null"
+        >
+          {{ __('Cerrar') }}
+        </button>
+      </div>
+      <div v-if="selectedDeals.length" class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b bg-surface-gray-1 text-xs text-ink-gray-5">
+            <tr>
+              <th class="px-4 py-2 text-left font-medium">
+                {{ __('Organización') }}
+              </th>
+              <th class="px-4 py-2 text-left font-medium">{{ __('Tipo') }}</th>
+              <th class="px-4 py-2 text-left font-medium">{{ __('Estado') }}</th>
+              <th class="px-4 py-2 text-right font-medium">{{ __('Monto') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="d in selectedDeals"
+              :key="d.name"
+              class="cursor-pointer border-b last:border-0 hover:bg-surface-gray-1"
+              @click="openDeal(d.name)"
+            >
+              <td class="px-4 py-2 text-ink-gray-8">
+                {{ d.organization || d.name }}
+              </td>
+              <td class="px-4 py-2 text-ink-gray-6">
+                {{ d.custom_tipo_oportunidad || '—' }}
+              </td>
+              <td class="px-4 py-2">
+                <span
+                  :class="
+                    d.status === 'Won' ? 'text-green-700' : 'text-ink-gray-6'
+                  "
+                  >{{ d.status || '—' }}</span
+                >
+              </td>
+              <td class="px-4 py-2 text-right font-medium text-ink-gray-9">
+                {{ money(Number(d[amount]) || 0) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else class="px-4 py-6 text-center text-sm text-ink-gray-4">
+        {{ __('Sin oportunidades') }}
       </div>
     </div>
 
@@ -231,6 +318,9 @@ import LayoutHeader from '@/components/LayoutHeader.vue'
 import ChartIcon from '~icons/lucide/bar-chart-3'
 import { createResource } from 'frappe-ui'
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 defineProps({
   embedded: { type: Boolean, default: false },
@@ -272,6 +362,8 @@ const dealsRes = createResource({
       'custom_ds_revenue',
       'custom_solaer_revenue',
       'custom_tipo_oportunidad',
+      'name',
+      'organization',
     ],
     limit_page_length: 0,
   },
@@ -320,6 +412,40 @@ const noDate = computed(() => {
   return b
 })
 const showNoDate = computed(() => includeNoDate.value && noDate.value.count > 0)
+
+// Selección de barra -> lista de oportunidades que la componen
+// null | 0..11 (índice de mes) | 'nodate'
+const selected = ref(null)
+function selectBucket(key) {
+  selected.value = selected.value === key ? null : key
+}
+const selectedLabel = computed(() => {
+  if (selected.value === null) return ''
+  if (selected.value === 'nodate') return 'Sin fecha de cierre'
+  return (MONTHS_FULL[selected.value] || '') + ' ' + year.value
+})
+const selectedDeals = computed(() => {
+  if (selected.value === null) return []
+  const out = []
+  for (const d of deals.value) {
+    if (!passesFilters(d)) continue
+    if (selected.value === 'nodate') {
+      if (d.expected_closure_date) continue
+    } else {
+      if (!d.expected_closure_date) continue
+      if (Number(d.expected_closure_date.slice(0, 4)) !== year.value) continue
+      if (Number(d.expected_closure_date.slice(5, 7)) - 1 !== selected.value)
+        continue
+    }
+    out.push(d)
+  }
+  return out.sort(
+    (a, b) => (Number(b[amount.value]) || 0) - (Number(a[amount.value]) || 0),
+  )
+})
+function openDeal(name) {
+  router.push({ name: 'Deal', params: { dealId: name } })
+}
 
 const monthlyTotal = computed(() =>
   monthly.value.reduce((a, m) => a + m.total, 0),
