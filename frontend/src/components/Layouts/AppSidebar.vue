@@ -72,7 +72,6 @@
                 :icon="link.icon"
                 :label="__(link.label)"
                 :to="link.to"
-                :href="link.href"
                 :isCollapsed="isSidebarCollapsed"
                 class="mx-2 my-[1.5px]"
               />
@@ -171,12 +170,6 @@ import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
 import LucidePackage from '~icons/lucide/package'
 import LucideBarChart3 from '~icons/lucide/bar-chart-3'
 import LucideBell from '~icons/lucide/bell'
-import LucideLifeBuoy from '~icons/lucide/life-buoy'
-import LucideGraduationCap from '~icons/lucide/graduation-cap'
-import LucideCalendarClock from '~icons/lucide/calendar-clock'
-import LucideHandshake from '~icons/lucide/handshake'
-import LucideWorkflow from '~icons/lucide/workflow'
-import LucideFilter from '~icons/lucide/filter'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import SearchIcon from '@/components/Icons/SearchIcon.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
@@ -256,6 +249,11 @@ onMounted(() => window.addEventListener('keydown', onSearchKeydown))
 
 const links = [
   {
+    label: 'Alertas',
+    icon: LucideBell,
+    to: 'Alertas',
+  },
+  {
     label: 'Leads',
     icon: LeadsIcon,
     to: 'Leads',
@@ -276,42 +274,19 @@ const links = [
     to: 'Organizations',
   },
   {
-    label: 'Oferta Comercial',
-    icon: LucidePackage,
-    to: 'OfertaComercial',
-  },
-]
-
-const moreLinks = [
-  {
-    label: 'Dashboard',
-    icon: LucideLayoutDashboard,
-    to: 'Dashboard',
-  },
-  {
-    label: 'Pipeline',
-    icon: LucideFilter,
-    to: 'Pipeline',
-  },
-  {
-    label: 'Alertas',
-    icon: LucideBell,
-    to: 'Alertas',
-  },
-  {
     label: 'Software',
     icon: SoftwareIcon,
     to: 'Software',
   },
   {
-    label: 'Partners',
-    icon: LucideHandshake,
-    to: 'Partners',
+    label: 'Oferta Comercial',
+    icon: LucidePackage,
+    to: 'OfertaComercial',
   },
   {
-    label: 'Procesos / Tecnologías',
-    icon: LucideWorkflow,
-    to: 'ProcesosTecnologias',
+    label: 'Dashboard',
+    icon: LucideLayoutDashboard,
+    to: 'Dashboard',
   },
   {
     label: 'Notes',
@@ -334,22 +309,6 @@ const moreLinks = [
     icon: AttachmentIcon,
     to: 'Attachments',
   },
-  {
-    label: 'Helpdesk',
-    icon: LucideLifeBuoy,
-    href: '/helpdesk',
-    groupStart: true,
-  },
-  {
-    label: 'LMS',
-    icon: LucideGraduationCap,
-    href: '/lms',
-  },
-  {
-    label: 'Citas',
-    icon: LucideCalendarClock,
-    href: '/app/appointment',
-  },
 ]
 
 const allViews = computed(() => {
@@ -359,16 +318,6 @@ const allViews = computed(() => {
       hideLabel: true,
       opened: true,
       views: links.filter((link) => {
-        if (link.condition) {
-          return link.condition()
-        }
-        return true
-      }),
-    },
-    {
-      name: 'Más',
-      opened: false,
-      views: moreLinks.filter((link) => {
         if (link.condition) {
           return link.condition()
         }
@@ -728,11 +677,11 @@ const articles = ref([
       { name: 'twilio', title: __('Twilio') },
       { name: 'exotel', title: __('Exotel') },
       { name: 'whatsapp', title: __('WhatsApp') },
-      { name: 'erpnext', title: __('ERP') },
+      { name: 'erpnext', title: __('ERPNext') },
     ],
   },
   {
-    title: __('CRM mobile'),
+    title: __('Frappe CRM mobile'),
     opened: false,
     subArticles: [
       { name: 'mobile-app-installation', title: __('Mobile App Installation') },

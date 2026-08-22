@@ -386,12 +386,20 @@ function passesFilters(d) {
   return true
 }
 
+// Fecha usada en el gráfico: para ganadas -> Closed Date (real);
+// para el resto -> Expected Closure Date (proyectada).
+function dealDate(d) {
+  if (d.status === 'Won') return d.closed_date || d.expected_closure_date || ''
+  return d.expected_closure_date || ''
+}
+
 const dealsRes = createResource({
   url: 'frappe.client.get_list',
   params: {
     doctype: 'CRM Deal',
     fields: [
       'expected_closure_date',
+      'closed_date',
       'status',
       'deal_value',
       'custom_ds_revenue',
@@ -410,7 +418,8 @@ const loading = computed(() => dealsRes.loading)
 const years = computed(() => {
   const s = new Set()
   for (const d of deals.value) {
-    if (d.expected_closure_date) s.add(Number(d.expected_closure_date.slice(0, 4)))
+    const dt = dealDate(d)
+    if (dt) s.add(Number(dt.slice(0, 4)))
   }
   s.add(new Date().getFullYear())
   return [...s].sort((a, b) => b - a)
@@ -426,10 +435,11 @@ const monthly = computed(() => {
     projAmt: 0,
   }))
   for (const d of deals.value) {
-    if (!d.expected_closure_date) continue
-    if (Number(d.expected_closure_date.slice(0, 4)) !== year.value) continue
+    const dt = dealDate(d)
+    if (!dt) continue
+    if (Number(dt.slice(0, 4)) !== year.value) continue
     if (!passesFilters(d)) continue
-    const mi = Number(d.expected_closure_date.slice(5, 7)) - 1
+    const mi = Number(dt.slice(5, 7)) - 1
     if (mi < 0 || mi > 11) continue
     const val = Number(d[amount.value]) || 0
     arr[mi].total += val
@@ -449,7 +459,7 @@ const noDate = computed(() => {
   const b = { total: 0, count: 0, won: 0, wonAmt: 0, projAmt: 0 }
   if (!includeNoDate.value) return b
   for (const d of deals.value) {
-    if (d.expected_closure_date) continue
+    if (dealDate(d)) continue
     if (!passesFilters(d)) continue
     const val = Number(d[amount.value]) || 0
     b.total += val
@@ -487,13 +497,13 @@ const selectedDeals = computed(() => {
   const out = []
   for (const d of deals.value) {
     if (!passesFilters(d)) continue
+    const dt = dealDate(d)
     if (selected.value === 'nodate') {
-      if (d.expected_closure_date) continue
+      if (dt) continue
     } else {
-      if (!d.expected_closure_date) continue
-      if (Number(d.expected_closure_date.slice(0, 4)) !== year.value) continue
-      if (Number(d.expected_closure_date.slice(5, 7)) - 1 !== selected.value)
-        continue
+      if (!dt) continue
+      if (Number(dt.slice(0, 4)) !== year.value) continue
+      if (Number(dt.slice(5, 7)) - 1 !== selected.value) continue
     }
     out.push(d)
   }
