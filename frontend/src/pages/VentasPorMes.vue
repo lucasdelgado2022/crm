@@ -15,6 +15,22 @@
           <input v-model="onlyWon" type="checkbox" class="rounded" />
           {{ __('Solo ganadas') }}
         </label>
+        <!-- Incluir sin fecha de cierre -->
+        <label
+          class="flex cursor-pointer items-center gap-1.5 text-sm text-ink-gray-7"
+        >
+          <input v-model="includeNoDate" type="checkbox" class="rounded" />
+          {{ __('Sin fecha') }}
+        </label>
+        <!-- Tipo: venta / renovación -->
+        <select
+          v-model="tipoFilter"
+          class="h-8 rounded-lg border border-outline-gray-2 bg-surface-base px-2 text-sm text-ink-gray-8 focus:outline-none"
+        >
+          <option value="">{{ __('Venta y Renovación') }}</option>
+          <option value="venta">{{ __('Solo Venta') }}</option>
+          <option value="renovacion">{{ __('Solo Renovación') }}</option>
+        </select>
         <!-- Año -->
         <select
           v-model.number="year"
@@ -53,6 +69,20 @@
           <input v-model="onlyWon" type="checkbox" class="rounded" />
           {{ __('Solo ganadas') }}
         </label>
+        <label
+          class="flex cursor-pointer items-center gap-1.5 text-sm text-ink-gray-7"
+        >
+          <input v-model="includeNoDate" type="checkbox" class="rounded" />
+          {{ __('Sin fecha') }}
+        </label>
+        <select
+          v-model="tipoFilter"
+          class="h-8 rounded-lg border border-outline-gray-2 bg-surface-base px-2 text-sm text-ink-gray-8 focus:outline-none"
+        >
+          <option value="">{{ __('Venta y Renovación') }}</option>
+          <option value="venta">{{ __('Solo Venta') }}</option>
+          <option value="renovacion">{{ __('Solo Renovación') }}</option>
+        </select>
         <select
           v-model.number="year"
           class="h-8 rounded-lg border border-outline-gray-2 bg-surface-base px-2 text-sm text-ink-gray-8 focus:outline-none"
@@ -79,7 +109,7 @@
       <div class="rounded-lg border p-3">
         <div class="text-xs text-ink-gray-5">{{ __('Promedio mensual') }}</div>
         <div class="mt-0.5 text-xl font-semibold text-ink-gray-9">
-          {{ money(yearTotal / 12) }}
+          {{ money(monthlyTotal / 12) }}
         </div>
       </div>
       <div class="rounded-lg border p-3">
@@ -123,6 +153,23 @@
           />
           <div class="mt-1.5 text-xs text-ink-gray-5">{{ MONTHS[i] }}</div>
         </div>
+        <!-- Barra: oportunidades sin fecha de cierre -->
+        <div
+          v-if="showNoDate"
+          class="group flex h-full flex-1 flex-col items-center justify-end"
+        >
+          <div
+            class="mb-1 text-xs font-medium text-ink-gray-7 opacity-0 transition group-hover:opacity-100"
+          >
+            {{ noDate.total ? moneyShort(noDate.total) : '' }}
+          </div>
+          <div
+            class="w-full rounded-t bg-amber-500 transition-all hover:bg-amber-600"
+            :style="{ height: barHeight(noDate.total) }"
+            :title="'Sin fecha: ' + money(noDate.total) + ' (' + noDate.count + ')'"
+          />
+          <div class="mt-1.5 text-xs text-ink-gray-5">{{ __('Sin fecha') }}</div>
+        </div>
       </div>
     </div>
 
@@ -148,6 +195,21 @@
             <td class="px-4 py-2 text-right text-green-700">{{ m.won }}</td>
             <td class="px-4 py-2 text-right font-medium text-ink-gray-9">
               {{ m.total ? money(m.total) : '—' }}
+            </td>
+          </tr>
+          <tr
+            v-if="showNoDate"
+            class="border-b last:border-0 hover:bg-surface-gray-1"
+          >
+            <td class="px-4 py-2 text-ink-gray-8">
+              {{ __('Sin fecha de cierre') }}
+            </td>
+            <td class="px-4 py-2 text-right text-ink-gray-7">
+              {{ noDate.count }}
+            </td>
+            <td class="px-4 py-2 text-right text-green-700">{{ noDate.won }}</td>
+            <td class="px-4 py-2 text-right font-medium text-ink-gray-9">
+              {{ noDate.total ? money(noDate.total) : '—' }}
             </td>
           </tr>
         </tbody>
@@ -185,6 +247,19 @@ const amountOptions = [
 const amount = ref('custom_solaer_revenue')
 const onlyWon = ref(false)
 const year = ref(new Date().getFullYear())
+// '' = todos, 'venta' = Nuevo:*, 'renovacion' = Renovación:*
+const tipoFilter = ref('')
+// incluir oportunidades sin fecha de cierre en un bucket "Sin fecha"
+const includeNoDate = ref(true)
+
+// pasa los filtros de "solo ganadas" y tipo (venta/renovación)
+function passesFilters(d) {
+  if (onlyWon.value && d.status !== 'Won') return false
+  const t = d.custom_tipo_oportunidad || ''
+  if (tipoFilter.value === 'venta' && !t.startsWith('Nuevo')) return false
+  if (tipoFilter.value === 'renovacion' && !t.startsWith('Renov')) return false
+  return true
+}
 
 const dealsRes = createResource({
   url: 'frappe.client.get_list',
@@ -196,6 +271,7 @@ const dealsRes = createResource({
       'annual_revenue',
       'custom_ds_revenue',
       'custom_solaer_revenue',
+      'custom_tipo_oportunidad',
     ],
     limit_page_length: 0,
   },
@@ -218,23 +294,45 @@ const monthly = computed(() => {
   for (const d of deals.value) {
     if (!d.expected_closure_date) continue
     if (Number(d.expected_closure_date.slice(0, 4)) !== year.value) continue
-    const isWon = d.status === 'Won'
-    if (onlyWon.value && !isWon) continue
+    if (!passesFilters(d)) continue
     const mi = Number(d.expected_closure_date.slice(5, 7)) - 1
     if (mi < 0 || mi > 11) continue
     const val = Number(d[amount.value]) || 0
     arr[mi].total += val
     arr[mi].count += 1
-    if (isWon) arr[mi].won += 1
+    if (d.status === 'Won') arr[mi].won += 1
   }
   return arr
 })
 
-const yearTotal = computed(() => monthly.value.reduce((a, m) => a + m.total, 0))
-const yearCount = computed(() => monthly.value.reduce((a, m) => a + m.count, 0))
-const yearWon = computed(() => monthly.value.reduce((a, m) => a + m.won, 0))
+// Oportunidades SIN fecha de cierre (no caen en ningún mes/año)
+const noDate = computed(() => {
+  const b = { total: 0, count: 0, won: 0 }
+  if (!includeNoDate.value) return b
+  for (const d of deals.value) {
+    if (d.expected_closure_date) continue
+    if (!passesFilters(d)) continue
+    const val = Number(d[amount.value]) || 0
+    b.total += val
+    b.count += 1
+    if (d.status === 'Won') b.won += 1
+  }
+  return b
+})
+const showNoDate = computed(() => includeNoDate.value && noDate.value.count > 0)
+
+const monthlyTotal = computed(() =>
+  monthly.value.reduce((a, m) => a + m.total, 0),
+)
+const yearTotal = computed(() => monthlyTotal.value + noDate.value.total)
+const yearCount = computed(
+  () => monthly.value.reduce((a, m) => a + m.count, 0) + noDate.value.count,
+)
+const yearWon = computed(
+  () => monthly.value.reduce((a, m) => a + m.won, 0) + noDate.value.won,
+)
 const maxMonth = computed(() =>
-  Math.max(1, ...monthly.value.map((m) => m.total)),
+  Math.max(1, ...monthly.value.map((m) => m.total), noDate.value.total),
 )
 const bestMonth = computed(() => {
   let idx = -1
