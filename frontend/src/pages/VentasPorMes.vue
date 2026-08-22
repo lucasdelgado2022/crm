@@ -122,6 +122,16 @@
 
     <!-- Gráfico de barras -->
     <div class="rounded-lg border p-4">
+      <div class="mb-3 flex items-center gap-4 text-xs text-ink-gray-6">
+        <span class="flex items-center gap-1.5">
+          <span class="h-2.5 w-2.5 rounded-sm bg-green-500" />
+          {{ __('Ganadas') }}
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="h-2.5 w-2.5 rounded-sm bg-violet-500" />
+          {{ __('Proyectadas') }}
+        </span>
+      </div>
       <div
         v-if="loading"
         class="flex h-64 items-center justify-center text-ink-gray-4"
@@ -148,15 +158,28 @@
             {{ m.total ? moneyShort(m.total) : '' }}
           </div>
           <div
-            class="w-full rounded-t transition-all"
-            :class="
-              selected === i
-                ? 'bg-blue-700 ring-2 ring-blue-300'
-                : 'bg-blue-500 hover:bg-blue-600'
-            "
+            class="w-full overflow-hidden rounded-t transition-all"
+            :class="selected === i ? 'ring-2 ring-ink-gray-4' : ''"
             :style="{ height: barHeight(m.total) }"
-            :title="MONTHS[i] + ': ' + money(m.total) + ' (' + m.count + ')'"
-          />
+            :title="
+              MONTHS[i] +
+              ': ' +
+              money(m.total) +
+              ' — Ganadas ' +
+              money(m.wonAmt) +
+              ' / Proyectadas ' +
+              money(m.projAmt)
+            "
+          >
+            <div
+              class="w-full bg-violet-500 transition-all hover:bg-violet-600"
+              :style="{ height: segPct(m.projAmt, m.total) + '%' }"
+            />
+            <div
+              class="w-full bg-green-500 transition-all hover:bg-green-600"
+              :style="{ height: segPct(m.wonAmt, m.total) + '%' }"
+            />
+          </div>
           <div
             class="mt-1.5 text-xs"
             :class="selected === i ? 'font-semibold text-ink-gray-8' : 'text-ink-gray-5'"
@@ -176,15 +199,27 @@
             {{ noDate.total ? moneyShort(noDate.total) : '' }}
           </div>
           <div
-            class="w-full rounded-t transition-all"
-            :class="
-              selected === 'nodate'
-                ? 'bg-amber-700 ring-2 ring-amber-300'
-                : 'bg-amber-500 hover:bg-amber-600'
-            "
+            class="w-full overflow-hidden rounded-t transition-all"
+            :class="selected === 'nodate' ? 'ring-2 ring-ink-gray-4' : ''"
             :style="{ height: barHeight(noDate.total) }"
-            :title="'Sin fecha: ' + money(noDate.total) + ' (' + noDate.count + ')'"
-          />
+            :title="
+              'Sin fecha: ' +
+              money(noDate.total) +
+              ' — Ganadas ' +
+              money(noDate.wonAmt) +
+              ' / Proyectadas ' +
+              money(noDate.projAmt)
+            "
+          >
+            <div
+              class="w-full bg-violet-500 transition-all hover:bg-violet-600"
+              :style="{ height: segPct(noDate.projAmt, noDate.total) + '%' }"
+            />
+            <div
+              class="w-full bg-green-500 transition-all hover:bg-green-600"
+              :style="{ height: segPct(noDate.wonAmt, noDate.total) + '%' }"
+            />
+          </div>
           <div
             class="mt-1.5 text-xs"
             :class="
@@ -332,7 +367,7 @@ const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','A
 const amountOptions = [
   { key: 'custom_solaer_revenue', label: 'Solaer Revenue' },
   { key: 'custom_ds_revenue', label: 'DS Revenue' },
-  { key: 'annual_revenue', label: 'Valor de Oportunidad' },
+  { key: 'deal_value', label: 'Valor de Oportunidad' },
 ]
 const amount = ref('custom_solaer_revenue')
 const onlyWon = ref(false)
@@ -358,7 +393,7 @@ const dealsRes = createResource({
     fields: [
       'expected_closure_date',
       'status',
-      'annual_revenue',
+      'deal_value',
       'custom_ds_revenue',
       'custom_solaer_revenue',
       'custom_tipo_oportunidad',
@@ -381,8 +416,15 @@ const years = computed(() => {
   return [...s].sort((a, b) => b - a)
 })
 
+// wonAmt = monto de ganadas (verde) | projAmt = monto del resto/proyectadas (violeta)
 const monthly = computed(() => {
-  const arr = Array.from({ length: 12 }, () => ({ total: 0, count: 0, won: 0 }))
+  const arr = Array.from({ length: 12 }, () => ({
+    total: 0,
+    count: 0,
+    won: 0,
+    wonAmt: 0,
+    projAmt: 0,
+  }))
   for (const d of deals.value) {
     if (!d.expected_closure_date) continue
     if (Number(d.expected_closure_date.slice(0, 4)) !== year.value) continue
@@ -392,14 +434,19 @@ const monthly = computed(() => {
     const val = Number(d[amount.value]) || 0
     arr[mi].total += val
     arr[mi].count += 1
-    if (d.status === 'Won') arr[mi].won += 1
+    if (d.status === 'Won') {
+      arr[mi].won += 1
+      arr[mi].wonAmt += val
+    } else {
+      arr[mi].projAmt += val
+    }
   }
   return arr
 })
 
 // Oportunidades SIN fecha de cierre (no caen en ningún mes/año)
 const noDate = computed(() => {
-  const b = { total: 0, count: 0, won: 0 }
+  const b = { total: 0, count: 0, won: 0, wonAmt: 0, projAmt: 0 }
   if (!includeNoDate.value) return b
   for (const d of deals.value) {
     if (d.expected_closure_date) continue
@@ -407,10 +454,21 @@ const noDate = computed(() => {
     const val = Number(d[amount.value]) || 0
     b.total += val
     b.count += 1
-    if (d.status === 'Won') b.won += 1
+    if (d.status === 'Won') {
+      b.won += 1
+      b.wonAmt += val
+    } else {
+      b.projAmt += val
+    }
   }
   return b
 })
+
+// % de cada segmento dentro de la barra
+function segPct(part, total) {
+  if (!total) return 0
+  return (part / total) * 100
+}
 const showNoDate = computed(() => includeNoDate.value && noDate.value.count > 0)
 
 // Selección de barra -> lista de oportunidades que la componen
