@@ -153,7 +153,7 @@
           @click="selectBucket(i)"
         >
           <div
-            class="mb-1 text-xs font-medium text-ink-gray-7 opacity-0 transition group-hover:opacity-100"
+            class="mb-1 whitespace-nowrap text-[10px] font-semibold text-ink-gray-7 sm:text-xs"
           >
             {{ m.total ? moneyShort(m.total) : '' }}
           </div>
@@ -194,7 +194,7 @@
           @click="selectBucket('nodate')"
         >
           <div
-            class="mb-1 text-xs font-medium text-ink-gray-7 opacity-0 transition group-hover:opacity-100"
+            class="mb-1 whitespace-nowrap text-[10px] font-semibold text-ink-gray-7 sm:text-xs"
           >
             {{ noDate.total ? moneyShort(noDate.total) : '' }}
           </div>
