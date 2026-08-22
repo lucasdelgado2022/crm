@@ -130,6 +130,17 @@ const routes = [
     component: () => import('@/pages/Pipeline.vue'),
   },
   {
+    path: '/ventas',
+    name: 'Ventas',
+    component: () => import('@/pages/Ventas.vue'),
+  },
+  {
+    path: '/ventas/:dealId',
+    name: 'VentaRelacion',
+    component: () => import('@/pages/VentaRelacion.vue'),
+    props: true,
+  },
+  {
     path: '/attachments',
     name: 'Attachments',
     component: () => import('@/pages/Attachments.vue'),

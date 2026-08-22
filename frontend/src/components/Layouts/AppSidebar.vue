@@ -185,6 +185,7 @@ import LucidePackage from '~icons/lucide/package'
 import LucideFilter from '~icons/lucide/filter'
 import LucideHandshake from '~icons/lucide/handshake'
 import LucideWorkflow from '~icons/lucide/workflow'
+import LucideReceipt from '~icons/lucide/receipt'
 import LucideLifeBuoy from '~icons/lucide/life-buoy'
 import LucideGraduationCap from '~icons/lucide/graduation-cap'
 import LucideCalendarClock from '~icons/lucide/calendar-clock'
@@ -406,6 +407,14 @@ function filterLinks(arr) {
     .map(mapLink)
 }
 
+const ventasLinks = [
+  {
+    label: 'Ventas',
+    icon: LucideReceipt,
+    to: 'Ventas',
+  },
+]
+
 const allViews = computed(() => {
   let _views = [
     {
@@ -413,6 +422,11 @@ const allViews = computed(() => {
       hideLabel: true,
       opened: true,
       views: filterLinks(links),
+    },
+    {
+      name: 'Ventas',
+      opened: true,
+      views: filterLinks(ventasLinks),
     },
     {
       name: 'Más',
