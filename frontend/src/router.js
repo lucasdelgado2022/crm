@@ -141,6 +141,36 @@ const routes = [
     props: true,
   },
   {
+    path: '/ventas/lista/entregas',
+    name: 'VentasEntregas',
+    component: () => import('@/pages/VentasLista.vue'),
+    props: { tipo: 'entregas' },
+  },
+  {
+    path: '/ventas/lista/facturas',
+    name: 'VentasFacturas',
+    component: () => import('@/pages/VentasLista.vue'),
+    props: { tipo: 'facturas' },
+  },
+  {
+    path: '/ventas/lista/cobros',
+    name: 'VentasCobros',
+    component: () => import('@/pages/VentasLista.vue'),
+    props: { tipo: 'cobros' },
+  },
+  {
+    path: '/ventas/lista/pagos-prov',
+    name: 'VentasPagosProv',
+    component: () => import('@/pages/VentasLista.vue'),
+    props: { tipo: 'pagos-prov' },
+  },
+  {
+    path: '/ventas/lista/impuestos',
+    name: 'VentasImpuestos',
+    component: () => import('@/pages/VentasLista.vue'),
+    props: { tipo: 'impuestos' },
+  },
+  {
     path: '/attachments',
     name: 'Attachments',
     component: () => import('@/pages/Attachments.vue'),

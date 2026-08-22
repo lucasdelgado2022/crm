@@ -186,6 +186,11 @@ import LucideFilter from '~icons/lucide/filter'
 import LucideHandshake from '~icons/lucide/handshake'
 import LucideWorkflow from '~icons/lucide/workflow'
 import LucideReceipt from '~icons/lucide/receipt'
+import LucideTruck from '~icons/lucide/truck'
+import LucideFileText from '~icons/lucide/file-text'
+import LucideBanknote from '~icons/lucide/banknote'
+import LucideCreditCard from '~icons/lucide/credit-card'
+import LucideLandmark from '~icons/lucide/landmark'
 import LucideLifeBuoy from '~icons/lucide/life-buoy'
 import LucideGraduationCap from '~icons/lucide/graduation-cap'
 import LucideCalendarClock from '~icons/lucide/calendar-clock'
@@ -412,6 +417,31 @@ const ventasLinks = [
     label: 'Ventas',
     icon: LucideReceipt,
     to: 'Ventas',
+  },
+  {
+    label: 'Entregas',
+    icon: LucideTruck,
+    to: 'VentasEntregas',
+  },
+  {
+    label: 'Facturas',
+    icon: LucideFileText,
+    to: 'VentasFacturas',
+  },
+  {
+    label: 'Cobros',
+    icon: LucideBanknote,
+    to: 'VentasCobros',
+  },
+  {
+    label: 'Pagos Prov',
+    icon: LucideCreditCard,
+    to: 'VentasPagosProv',
+  },
+  {
+    label: 'Impuestos',
+    icon: LucideLandmark,
+    to: 'VentasImpuestos',
   },
 ]
 
