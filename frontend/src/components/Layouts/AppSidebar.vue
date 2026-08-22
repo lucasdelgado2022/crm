@@ -72,6 +72,7 @@
                 :icon="link.icon"
                 :label="__(link.label)"
                 :to="link.to"
+                :href="link.href"
                 :isCollapsed="isSidebarCollapsed"
                 class="mx-2 my-[1.5px]"
               />
@@ -170,6 +171,12 @@ import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
 import LucidePackage from '~icons/lucide/package'
 import LucideBarChart3 from '~icons/lucide/bar-chart-3'
 import LucideBell from '~icons/lucide/bell'
+import LucideHandshake from '~icons/lucide/handshake'
+import LucideWorkflow from '~icons/lucide/workflow'
+import LucideFilter from '~icons/lucide/filter'
+import LucideLifeBuoy from '~icons/lucide/life-buoy'
+import LucideGraduationCap from '~icons/lucide/graduation-cap'
+import LucideCalendarClock from '~icons/lucide/calendar-clock'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import SearchIcon from '@/components/Icons/SearchIcon.vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
@@ -249,11 +256,6 @@ onMounted(() => window.addEventListener('keydown', onSearchKeydown))
 
 const links = [
   {
-    label: 'Alertas',
-    icon: LucideBell,
-    to: 'Alertas',
-  },
-  {
     label: 'Leads',
     icon: LeadsIcon,
     to: 'Leads',
@@ -274,11 +276,6 @@ const links = [
     to: 'Organizations',
   },
   {
-    label: 'Software',
-    icon: SoftwareIcon,
-    to: 'Software',
-  },
-  {
     label: 'Oferta Comercial',
     icon: LucidePackage,
     to: 'OfertaComercial',
@@ -288,11 +285,44 @@ const links = [
     icon: LucideLayoutDashboard,
     to: 'Dashboard',
   },
+]
+
+// Sección desplegable "Más" (sin Dashboard, que está arriba bajo Oferta Comercial)
+const moreLinks = [
+  {
+    label: 'Alertas',
+    icon: LucideBell,
+    to: 'Alertas',
+  },
+  {
+    label: 'Software',
+    icon: SoftwareIcon,
+    to: 'Software',
+  },
+  {
+    label: 'Partners',
+    icon: LucideHandshake,
+    to: 'Partners',
+  },
+  {
+    label: 'Procesos / Tecnologías',
+    icon: LucideWorkflow,
+    to: 'ProcesosTecnologias',
+  },
+  {
+    label: 'Pipeline',
+    icon: LucideFilter,
+    to: 'Pipeline',
+  },
+  {
+    label: 'Ventas por Mes',
+    icon: LucideBarChart3,
+    to: 'VentasPorMes',
+  },
   {
     label: 'Notes',
     icon: NoteIcon,
     to: 'Notes',
-    groupStart: true,
   },
   {
     label: 'Tasks',
@@ -309,6 +339,21 @@ const links = [
     icon: AttachmentIcon,
     to: 'Attachments',
   },
+  {
+    label: 'Helpdesk',
+    icon: LucideLifeBuoy,
+    href: '/helpdesk',
+  },
+  {
+    label: 'LMS',
+    icon: LucideGraduationCap,
+    href: '/lms',
+  },
+  {
+    label: 'Citas',
+    icon: LucideCalendarClock,
+    href: '/app/appointment',
+  },
 ]
 
 const allViews = computed(() => {
@@ -318,6 +363,16 @@ const allViews = computed(() => {
       hideLabel: true,
       opened: true,
       views: links.filter((link) => {
+        if (link.condition) {
+          return link.condition()
+        }
+        return true
+      }),
+    },
+    {
+      name: 'Más',
+      opened: false,
+      views: moreLinks.filter((link) => {
         if (link.condition) {
           return link.condition()
         }

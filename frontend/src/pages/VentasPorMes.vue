@@ -27,9 +27,10 @@
           v-model="tipoFilter"
           class="h-8 rounded-lg border border-outline-gray-2 bg-surface-base px-2 text-sm text-ink-gray-8 focus:outline-none"
         >
-          <option value="">{{ __('Venta y Renovación') }}</option>
+          <option value="">{{ __('Todos los tipos') }}</option>
           <option value="venta">{{ __('Solo Venta') }}</option>
           <option value="renovacion">{{ __('Solo Renovación') }}</option>
+          <option value="servicio">{{ __('Solo Servicio') }}</option>
         </select>
         <!-- Año -->
         <select
@@ -79,9 +80,10 @@
           v-model="tipoFilter"
           class="h-8 rounded-lg border border-outline-gray-2 bg-surface-base px-2 text-sm text-ink-gray-8 focus:outline-none"
         >
-          <option value="">{{ __('Venta y Renovación') }}</option>
+          <option value="">{{ __('Todos los tipos') }}</option>
           <option value="venta">{{ __('Solo Venta') }}</option>
           <option value="renovacion">{{ __('Solo Renovación') }}</option>
+          <option value="servicio">{{ __('Solo Servicio') }}</option>
         </select>
         <select
           v-model.number="year"
@@ -155,7 +157,7 @@
           <div
             class="mb-1 whitespace-nowrap text-[10px] font-semibold text-ink-gray-7 sm:text-xs"
           >
-            {{ m.total ? moneyShort(m.total) : '' }}
+            {{ m.count ? moneyShort(m.total) + ' (' + m.count + ')' : '' }}
           </div>
           <div
             class="w-full overflow-hidden rounded-t transition-all"
@@ -196,7 +198,7 @@
           <div
             class="mb-1 whitespace-nowrap text-[10px] font-semibold text-ink-gray-7 sm:text-xs"
           >
-            {{ noDate.total ? moneyShort(noDate.total) : '' }}
+            {{ noDate.count ? moneyShort(noDate.total) + ' (' + noDate.count + ')' : '' }}
           </div>
           <div
             class="w-full overflow-hidden rounded-t transition-all"
@@ -383,6 +385,7 @@ function passesFilters(d) {
   const t = d.custom_tipo_oportunidad || ''
   if (tipoFilter.value === 'venta' && !t.startsWith('Nuevo')) return false
   if (tipoFilter.value === 'renovacion' && !t.startsWith('Renov')) return false
+  if (tipoFilter.value === 'servicio' && !t.startsWith('Servicio')) return false
   return true
 }
 
