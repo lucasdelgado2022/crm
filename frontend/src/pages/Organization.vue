@@ -168,6 +168,26 @@
       </div>
 
       <template v-if="orgTab === 'general'">
+      <!-- KPIs de Oportunidades -->
+      <div class="grid shrink-0 grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="rounded-lg border p-4">
+          <div class="text-2xl font-semibold text-ink-gray-9">{{ kpiActivas }}</div>
+          <div class="text-sm text-ink-gray-5">{{ __('Oport. activas') }}</div>
+        </div>
+        <div class="rounded-lg border p-4">
+          <div class="text-2xl font-semibold text-ink-gray-9">{{ kpiTotales }}</div>
+          <div class="text-sm text-ink-gray-5">{{ __('Oport. totales') }}</div>
+        </div>
+        <div class="rounded-lg border p-4">
+          <div class="text-2xl font-semibold text-ink-gray-9">{{ kpiPipelineFmt }}</div>
+          <div class="text-sm text-ink-gray-5">{{ __('Pipeline') }}</div>
+        </div>
+        <div class="rounded-lg border p-4">
+          <div class="text-2xl font-semibold text-ink-gray-9">{{ kpiGanadas }}</div>
+          <div class="text-sm text-ink-gray-5">{{ __('Ganadas') }}</div>
+        </div>
+      </div>
+
       <!-- Widget: Plataformas y Comunidades -->
       <div class="shrink-0 rounded-lg border">
         <div
@@ -1472,6 +1492,28 @@ const softwareRows = computed(() => [
 ])
 
 const { getFormattedCurrency } = getMeta('CRM Deal')
+
+const isDealOpen = (d) => {
+  const t = getDealStatus(d.status)?.type
+  return t !== 'Won' && t !== 'Lost'
+}
+const kpiTotales = computed(() => (deals.data || []).length)
+const kpiActivas = computed(() => (deals.data || []).filter(isDealOpen).length)
+const kpiGanadas = computed(
+  () => (deals.data || []).filter((d) => getDealStatus(d.status)?.type === 'Won').length,
+)
+const kpiPipeline = computed(() =>
+  (deals.data || [])
+    .filter(isDealOpen)
+    .reduce((a, d) => a + (d.deal_value || d.annual_revenue || 0), 0),
+)
+const kpiPipelineFmt = computed(() => {
+  try {
+    return getFormattedCurrency('deal_value', { deal_value: kpiPipeline.value })
+  } catch (e) {
+    return kpiPipeline.value
+  }
+})
 
 function getSoftwareRowObject(sw) {
   return {
