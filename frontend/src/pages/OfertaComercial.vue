@@ -7,17 +7,25 @@
       </div>
     </template>
     <template #right-header>
-      <div class="relative">
-        <FeatherIcon
-          name="search"
-          class="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-gray-4"
-        />
-        <input
-          v-model="search"
-          type="text"
-          :placeholder="__('Buscar producto...')"
-          class="h-8 w-56 rounded-lg border border-outline-gray-2 bg-surface-base pl-8 pr-2 text-base text-ink-gray-8 focus:border-outline-gray-3 focus:outline-none focus:ring-0"
-        />
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <FeatherIcon
+            name="search"
+            class="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-gray-4"
+          />
+          <input
+            v-model="search"
+            type="text"
+            :placeholder="__('Buscar producto...')"
+            class="h-8 w-56 rounded-lg border border-outline-gray-2 bg-surface-base pl-8 pr-2 text-base text-ink-gray-8 focus:border-outline-gray-3 focus:outline-none focus:ring-0"
+          />
+        </div>
+        <Button variant="solid" @click="openNew">
+          <template #prefix>
+            <FeatherIcon name="plus" class="h-4" />
+          </template>
+          {{ __('Nuevo') }}
+        </Button>
       </div>
     </template>
   </LayoutHeader>
@@ -173,6 +181,16 @@
                       {{ p.product_code }}
                     </div>
                   </div>
+                  <button
+                    class="ml-auto flex shrink-0 items-center gap-0.5 rounded p-1 text-ink-gray-4 hover:bg-surface-gray-2 hover:text-ink-gray-7"
+                    :title="__('Adjuntos')"
+                    @click="openFiles(p)"
+                  >
+                    <FeatherIcon name="paperclip" class="h-3.5 w-3.5" />
+                    <span v-if="attachCount[p.name]" class="text-xs">{{
+                      attachCount[p.name]
+                    }}</span>
+                  </button>
                 </div>
               </td>
               <td class="px-3 py-2">
@@ -228,6 +246,133 @@
       </div>
     </div>
   </div>
+
+  <!-- Dialog: Nuevo producto -->
+  <Dialog v-model="showNew" :options="{ title: __('Nuevo producto'), size: 'lg' }">
+    <template #body-content>
+      <div class="flex flex-col gap-3">
+        <input
+          v-model="nf.product_name"
+          :placeholder="__('Nombre del producto *')"
+          class="h-9 w-full rounded border border-outline-gray-2 bg-surface-base px-3 text-sm text-ink-gray-8 focus:outline-none"
+        />
+        <div class="grid grid-cols-2 gap-3">
+          <input
+            v-model="nf.product_code"
+            :placeholder="__('Código')"
+            class="h-9 rounded border border-outline-gray-2 bg-surface-base px-3 text-sm text-ink-gray-8 focus:outline-none"
+          />
+          <input
+            v-model.number="nf.standard_rate"
+            type="number"
+            :placeholder="__('Precio')"
+            class="h-9 rounded border border-outline-gray-2 bg-surface-base px-3 text-sm text-ink-gray-8 focus:outline-none"
+          />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <select
+            v-model="nf.custom_categoria"
+            class="h-9 rounded border border-outline-gray-2 bg-surface-base px-2 text-sm text-ink-gray-8 focus:outline-none"
+          >
+            <option value="">{{ __('Categoría...') }}</option>
+            <option v-for="c in taxonomy" :key="c.cat" :value="c.cat">
+              {{ c.cat }}
+            </option>
+          </select>
+          <select
+            v-model="nf.color"
+            class="h-9 rounded border border-outline-gray-2 bg-surface-base px-2 text-sm text-ink-gray-8 focus:outline-none"
+          >
+            <option value="">{{ __('Color...') }}</option>
+            <option v-for="c in colorKeys" :key="c" :value="c">{{ c }}</option>
+          </select>
+        </div>
+        <div>
+          <div class="mb-1 text-xs text-ink-gray-5">
+            {{ __('Producto ERP (opcional)') }}
+          </div>
+          <Link
+            class="form-control"
+            doctype="Item"
+            :value="nf.erpnext_item_code"
+            :placeholder="__('Buscar producto del ERP...')"
+            @change="(v) => (nf.erpnext_item_code = v)"
+          />
+        </div>
+        <textarea
+          v-model="nf.description"
+          rows="3"
+          :placeholder="__('Descripción')"
+          class="w-full rounded border border-outline-gray-2 bg-surface-base p-3 text-sm text-ink-gray-8 focus:outline-none"
+        />
+        <div class="flex justify-end gap-2 pt-1">
+          <Button @click="showNew = false">{{ __('Cancelar') }}</Button>
+          <Button
+            variant="solid"
+            :loading="savingNew"
+            :disabled="!nf.product_name.trim()"
+            @click="saveNew"
+          >
+            {{ __('Crear') }}
+          </Button>
+        </div>
+      </div>
+    </template>
+  </Dialog>
+
+  <!-- Dialog: Adjuntos -->
+  <Dialog
+    v-model="showFiles"
+    :options="{
+      title: __('Adjuntos') + (filesProduct ? ' — ' + filesProduct : ''),
+      size: 'lg',
+    }"
+  >
+    <template #body-content>
+      <input
+        ref="fileInput"
+        type="file"
+        multiple
+        class="hidden"
+        @change="onFilePicked"
+      />
+      <Button variant="outline" :loading="uploading" @click="fileInput?.click()">
+        <template #prefix>
+          <FeatherIcon name="upload" class="h-4" />
+        </template>
+        {{ __('Subir archivo') }}
+      </Button>
+      <div v-if="filesList.length" class="mt-3 flex flex-col gap-2">
+        <div
+          v-for="f in filesList"
+          :key="f.name"
+          class="flex items-center justify-between gap-2 rounded border p-2"
+        >
+          <a
+            :href="f.file_url"
+            target="_blank"
+            class="flex min-w-0 items-center gap-2 truncate text-sm text-blue-600 hover:underline"
+          >
+            <FeatherIcon name="file" class="h-4 w-4 shrink-0 text-ink-gray-5" />
+            <span class="truncate">{{ f.file_name }}</span>
+          </a>
+          <button
+            class="shrink-0 rounded p-1 text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-red-6"
+            :title="__('Eliminar')"
+            @click="deleteFile(f.name)"
+          >
+            <FeatherIcon name="trash-2" class="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+      <div
+        v-else
+        class="mt-3 flex h-20 items-center justify-center text-sm text-ink-gray-4"
+      >
+        {{ __('Sin adjuntos') }}
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
@@ -235,7 +380,7 @@ import LayoutHeader from '@/components/LayoutHeader.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import Link from '@/components/Controls/Link.vue'
 import PackageIcon from '~icons/lucide/package'
-import { FeatherIcon, createResource, call, toast } from 'frappe-ui'
+import { FeatherIcon, createResource, call, toast, Dialog, Button } from 'frappe-ui'
 import { ref, computed, reactive } from 'vue'
 
 const taxonomy = [
@@ -590,4 +735,142 @@ function money(n) {
   if (!v) return '—'
   return '$' + Math.round(v).toLocaleString('es-AR')
 }
+
+const colorKeys = Object.keys(COLOR_MAP)
+
+// --- Nuevo producto ---
+const showNew = ref(false)
+const savingNew = ref(false)
+const nf = reactive({
+  product_name: '',
+  product_code: '',
+  standard_rate: null,
+  custom_categoria: '',
+  color: '',
+  erpnext_item_code: '',
+  description: '',
+})
+function openNew() {
+  Object.assign(nf, {
+    product_name: '',
+    product_code: '',
+    standard_rate: null,
+    custom_categoria: sel.level === 'cat' ? sel.cat : '',
+    color: '',
+    erpnext_item_code: '',
+    description: '',
+  })
+  showNew.value = true
+}
+async function saveNew() {
+  if (!nf.product_name.trim()) return
+  savingNew.value = true
+  try {
+    await call('frappe.client.insert', {
+      doc: {
+        doctype: 'CRM Product',
+        product_name: nf.product_name,
+        product_code: nf.product_code || nf.product_name,
+        standard_rate: nf.standard_rate || 0,
+        custom_categoria: nf.custom_categoria || null,
+        color: nf.color || null,
+        erpnext_item_code: nf.erpnext_item_code || null,
+        description: nf.description || null,
+      },
+    })
+    toast.success(__('Producto creado'))
+    showNew.value = false
+    productsRes.reload()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('No se pudo crear el producto'))
+  } finally {
+    savingNew.value = false
+  }
+}
+
+// --- Adjuntos por producto ---
+const showFiles = ref(false)
+const filesProduct = ref('')
+const filesList = ref([])
+const uploading = ref(false)
+const fileInput = ref(null)
+async function openFiles(p) {
+  filesProduct.value = p.name
+  showFiles.value = true
+  await loadFiles()
+}
+async function loadFiles() {
+  if (!filesProduct.value) return
+  try {
+    filesList.value = await call('frappe.client.get_list', {
+      doctype: 'File',
+      filters: {
+        attached_to_doctype: 'CRM Product',
+        attached_to_name: filesProduct.value,
+      },
+      fields: ['name', 'file_name', 'file_url', 'file_size'],
+      order_by: 'creation desc',
+      limit_page_length: 0,
+    })
+  } catch (e) {
+    filesList.value = []
+  }
+}
+async function onFilePicked(e) {
+  const files = Array.from(e.target.files || [])
+  if (!files.length) return
+  uploading.value = true
+  let ok = 0
+  for (const file of files) {
+    const fd = new FormData()
+    fd.append('file', file, file.name)
+    fd.append('is_private', '0')
+    fd.append('folder', 'Home/Attachments')
+    fd.append('doctype', 'CRM Product')
+    fd.append('docname', filesProduct.value)
+    try {
+      const res = await fetch('/api/method/upload_file', {
+        method: 'POST',
+        headers: { 'X-Frappe-CSRF-Token': window.csrf_token },
+        body: fd,
+      })
+      if (res.ok) ok++
+    } catch (err) {
+      // ignore
+    }
+  }
+  e.target.value = ''
+  uploading.value = false
+  if (ok) toast.success(__('Archivo(s) subido(s)'))
+  await loadFiles()
+  attachCountRes.reload()
+}
+async function deleteFile(name) {
+  try {
+    await call('frappe.client.delete', { doctype: 'File', name })
+    await loadFiles()
+    attachCountRes.reload()
+  } catch (e) {
+    toast.error(__('No se pudo eliminar'))
+  }
+}
+
+// contador de adjuntos por producto
+const attachCountRes = createResource({
+  url: 'frappe.client.get_list',
+  params: {
+    doctype: 'File',
+    filters: { attached_to_doctype: 'CRM Product' },
+    fields: ['attached_to_name', 'count(name) as c'],
+    group_by: 'attached_to_name',
+    limit_page_length: 0,
+  },
+  auto: true,
+})
+const attachCount = computed(() => {
+  const m = {}
+  for (const r of attachCountRes.data || [])
+    if (r.attached_to_name) m[r.attached_to_name] = r.c
+  return m
+})
 </script>

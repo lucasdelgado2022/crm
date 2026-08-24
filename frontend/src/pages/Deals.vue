@@ -8,6 +8,15 @@
         v-if="dealsListView?.customListActions"
         :actions="dealsListView.customListActions"
       />
+      <select
+        v-model="yearFilter"
+        class="h-7 rounded-lg border border-outline-gray-2 bg-surface-base px-2 text-base text-ink-gray-8 focus:outline-none"
+        :title="__('Filtrar por año de cierre (Expected Closure Date)')"
+        @change="applyYearFilter"
+      >
+        <option :value="null">{{ __('Año: Todos') }}</option>
+        <option v-for="y in availableYears" :key="y" :value="y">{{ y }}</option>
+      </select>
       <Button
         variant="outline"
         :tooltip="__('Copiar link de esta vista con sus filtros')"
@@ -409,6 +418,27 @@ function setStatusFilter(status) {
   const f = { ...(deals.value?.params?.filters || {}) }
   if (status) f.status = status
   else delete f.status
+  viewControls.value?.updateFilter(f)
+}
+
+// Filtro por año de cierre (expected_closure_date)
+const yearFilter = ref(null)
+const availableYears = computed(() => {
+  const cur = new Date().getFullYear()
+  const arr = []
+  for (let y = cur; y >= cur - 6; y--) arr.push(y)
+  return arr
+})
+function applyYearFilter() {
+  const f = { ...(deals.value?.params?.filters || {}) }
+  if (yearFilter.value) {
+    f.expected_closure_date = [
+      'between',
+      [`${yearFilter.value}-01-01`, `${yearFilter.value}-12-31`],
+    ]
+  } else {
+    delete f.expected_closure_date
+  }
   viewControls.value?.updateFilter(f)
 }
 

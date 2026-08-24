@@ -183,8 +183,9 @@ const showDatePicker = ref(false)
 const datePickerRef = ref(null)
 const preset = ref('Last 30 Days')
 const showAddChartModal = ref(false)
-const selectedDashboard = ref('Manager Dashboard')
 const VENTAS_POR_MES = '__ventas_por_mes'
+// Vista por defecto del Dashboard: Ventas por Mes
+const selectedDashboard = ref(VENTAS_POR_MES)
 const isVentas = computed(() => selectedDashboard.value === VENTAS_POR_MES)
 
 const filters = reactive({
@@ -280,6 +281,8 @@ const dashboards = createListResource({
   pageLength: 50,
   auto: true,
   onSuccess: (data: any[]) => {
+    // No pisar la vista por defecto Ventas por Mes
+    if (selectedDashboard.value === VENTAS_POR_MES) return
     if (data?.length && !data.find((d) => d.name === selectedDashboard.value)) {
       selectedDashboard.value = data[0].name
       dashboardItems.reload()

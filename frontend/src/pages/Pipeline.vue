@@ -142,14 +142,14 @@ import {
   FormControl,
   Badge,
   Avatar,
-  createListResource,
+  createResource,
   usePageMeta,
 } from 'frappe-ui'
 import { reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const { getDealStatus } = statusesStore()
+const { getDealStatus, dealStatuses } = statusesStore()
 const { getUser } = usersStore()
 const { getFormattedCurrency } = getMeta('CRM Deal')
 
@@ -188,29 +188,33 @@ function buildFilters() {
   return f
 }
 
-const deals = createListResource({
-  type: 'list',
-  doctype: 'CRM Deal',
-  cache: ['pipeline-deals'],
-  fields: [
-    'name',
-    'organization',
-    'status',
-    'deal_owner',
-    'custom_producto',
-    'expected_closure_date',
-    'annual_revenue',
-  ],
-  filters: buildFilters(),
-  orderBy: 'expected_closure_date asc',
-  pageLength: 0,
+// Traer TODAS las oportunidades (limit_page_length: 0), sin paginar,
+// para que cada una aparezca en su columna de estado.
+const deals = createResource({
+  url: 'frappe.client.get_list',
+  makeParams() {
+    return {
+      doctype: 'CRM Deal',
+      fields: [
+        'name',
+        'organization',
+        'status',
+        'deal_owner',
+        'custom_producto',
+        'expected_closure_date',
+        'annual_revenue',
+      ],
+      filters: buildFilters(),
+      order_by: 'expected_closure_date asc',
+      limit_page_length: 0,
+    }
+  },
   auto: true,
 })
 
 watch(
   filters,
   () => {
-    deals.update({ filters: buildFilters() })
     deals.reload()
   },
   { deep: true },
@@ -276,8 +280,13 @@ const columns = computed(() => {
     if (!groups[s]) groups[s] = []
     groups[s].push(d)
   }
-  const cols = Object.keys(groups).map((s) => {
-    const sorted = groups[s]
+  // Una columna por cada estado del funnel (aunque no tenga deals) + cualquier
+  // estado presente en los datos que no esté en la lista.
+  const allStatuses = (dealStatuses?.data || []).map((s) => s.name)
+  const statusSet = [...new Set([...allStatuses, ...Object.keys(groups)])]
+  const cols = statusSet.map((s) => {
+    const list = groups[s] || []
+    const sorted = list
       .slice()
       .sort((a, b) => {
         const av = a.expected_closure_date || '9999-12-31'
@@ -285,7 +294,7 @@ const columns = computed(() => {
         return av < bv ? -1 : av > bv ? 1 : 0
       })
       .map(mapCard)
-    const amount = groups[s].reduce((x, d) => x + (d.annual_revenue || 0), 0)
+    const amount = list.reduce((x, d) => x + (d.annual_revenue || 0), 0)
     return {
       status: s,
       position: getDealStatus(s)?.position ?? 999,
