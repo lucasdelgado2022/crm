@@ -17,51 +17,6 @@
   </LayoutHeader>
 
   <div class="flex h-full flex-col overflow-y-auto p-4 sm:p-6">
-    <!-- Resumen closed-won -->
-    <div class="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <div class="rounded-lg border border-green-200 bg-green-50 p-3">
-        <div class="text-xs text-green-700">{{ __('Ganado este mes') }}</div>
-        <div class="mt-0.5 text-xl font-semibold text-green-800">
-          {{ money(won.mes.monto) }}
-        </div>
-        <div class="text-xs text-green-700">
-          {{ won.mes.count }} {{ __('oportunidades') }}
-        </div>
-      </div>
-      <div class="rounded-lg border border-green-200 bg-green-50 p-3">
-        <div class="text-xs text-green-700">{{ __('Ganado este año') }}</div>
-        <div class="mt-0.5 text-xl font-semibold text-green-800">
-          {{ money(won.anio.monto) }}
-        </div>
-        <div class="text-xs text-green-700">
-          {{ won.anio.count }} {{ __('oportunidades') }}
-        </div>
-      </div>
-      <div class="rounded-lg border p-3">
-        <div class="text-xs text-ink-gray-5">{{ __('Por cerrar este mes') }}</div>
-        <div class="mt-0.5 text-xl font-semibold text-ink-gray-9">
-          {{ money(porCerrar.monto) }}
-        </div>
-        <div class="text-xs text-ink-gray-5">
-          {{ porCerrar.count }} {{ __('oportunidades') }}
-        </div>
-      </div>
-      <div
-        class="rounded-lg border p-3"
-        :class="overdue.length ? 'border-red-200 bg-red-50' : ''"
-      >
-        <div class="text-xs" :class="overdue.length ? 'text-red-700' : 'text-ink-gray-5'">
-          {{ __('Tareas vencidas') }}
-        </div>
-        <div
-          class="mt-0.5 text-xl font-semibold"
-          :class="overdue.length ? 'text-red-700' : 'text-ink-gray-9'"
-        >
-          {{ overdue.length }}
-        </div>
-      </div>
-    </div>
-
     <!-- Tareas vencidas -->
     <div class="rounded-lg border">
       <div class="flex items-center gap-2 border-b px-4 py-3 text-base font-semibold text-ink-gray-8">
@@ -83,9 +38,12 @@
         <thead class="border-b bg-surface-gray-1 text-xs text-ink-gray-5">
           <tr>
             <th class="px-4 py-2 text-left font-medium">{{ __('Tarea') }}</th>
-            <th class="px-3 py-2 text-left font-medium">{{ __('Vencimiento') }}</th>
+            <th class="px-3 py-2 text-left font-medium">{{ __('Vencida hace') }}</th>
+            <th class="px-3 py-2 text-left font-medium">{{ __('Fecha vto.') }}</th>
             <th class="px-3 py-2 text-left font-medium">{{ __('Prioridad') }}</th>
             <th class="px-3 py-2 text-left font-medium">{{ __('Responsable') }}</th>
+            <th class="px-3 py-2 text-left font-medium">{{ __('Empresa') }}</th>
+            <th class="px-3 py-2 text-left font-medium">{{ __('Contacto') }}</th>
             <th class="px-3 py-2 text-left font-medium">{{ __('Vinculado a') }}</th>
           </tr>
         </thead>
@@ -100,6 +58,9 @@
             <td class="whitespace-nowrap px-3 py-2 text-red-600">
               {{ diasVencida(t.due_date) }}
             </td>
+            <td class="whitespace-nowrap px-3 py-2 text-ink-gray-7">
+              {{ fmtFecha(t.due_date) }}
+            </td>
             <td class="px-3 py-2">
               <span
                 class="rounded px-1.5 py-0.5 text-xs font-medium"
@@ -109,6 +70,12 @@
             </td>
             <td class="px-3 py-2 text-ink-gray-7">
               {{ userLabel(t.assigned_to) }}
+            </td>
+            <td class="px-3 py-2 text-ink-gray-7">
+              {{ (refInfo[t.reference_docname] && refInfo[t.reference_docname].org) || '—' }}
+            </td>
+            <td class="px-3 py-2 text-ink-gray-7">
+              {{ (refInfo[t.reference_docname] && refInfo[t.reference_docname].contact) || '—' }}
             </td>
             <td class="px-3 py-2 text-ink-gray-6">
               <span v-if="t.reference_docname" class="text-blue-600 hover:underline">
@@ -126,7 +93,7 @@
 <script setup>
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import BellIcon from '~icons/lucide/bell'
-import { FeatherIcon, createResource } from 'frappe-ui'
+import { FeatherIcon, createResource, call } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
 import { usersStore } from '@/stores/users'
 import { ref, computed, watch } from 'vue'
@@ -185,7 +152,7 @@ const dealsRes = createResource({
         'status',
         'deal_owner',
         'custom_solaer_revenue',
-        'expected_closure_date',
+        'closed_date',
       ],
       limit_page_length: 0,
     }
@@ -197,6 +164,60 @@ watch(soloMias, () => {
   tasksRes.reload()
   dealsRes.reload()
 })
+
+const refInfo = ref({})
+async function loadRefInfo() {
+  const deals = [
+    ...new Set(
+      (tasksRes.data || [])
+        .filter((t) => t.reference_doctype === 'CRM Deal' && t.reference_docname)
+        .map((t) => t.reference_docname),
+    ),
+  ]
+  if (!deals.length) {
+    refInfo.value = {}
+    return
+  }
+  const info = {}
+  try {
+    const drows = await call('frappe.client.get_list', {
+      doctype: 'CRM Deal',
+      filters: { name: ['in', deals] },
+      fields: ['name', 'organization'],
+      limit_page_length: 0,
+    })
+    for (const d of drows) info[d.name] = { org: d.organization || '', contact: '' }
+    const crows = await call('frappe.client.get_list', {
+      doctype: 'CRM Contacts',
+      parent: 'CRM Deal',
+      filters: { parenttype: 'CRM Deal', parent: ['in', deals], is_primary: 1 },
+      fields: ['parent', 'contact'],
+      limit_page_length: 0,
+    })
+    const cnames = [...new Set(crows.map((c) => c.contact).filter(Boolean))]
+    const cmap = {}
+    if (cnames.length) {
+      const cc = await call('frappe.client.get_list', {
+        doctype: 'Contact',
+        filters: { name: ['in', cnames] },
+        fields: ['name', 'first_name', 'last_name'],
+        limit_page_length: 0,
+      })
+      for (const c of cc)
+        cmap[c.name] = ((c.first_name || '') + ' ' + (c.last_name || '')).trim()
+    }
+    for (const c of crows)
+      if (info[c.parent]) info[c.parent].contact = cmap[c.contact] || c.contact
+  } catch (e) {
+    // noop
+  }
+  refInfo.value = info
+}
+watch(() => tasksRes.data, loadRefInfo)
+
+function fmtFecha(d) {
+  return d ? String(d).slice(0, 10) : ''
+}
 
 const loading = computed(() => tasksRes.loading || dealsRes.loading)
 const overdue = computed(() => tasksRes.data || [])
@@ -211,9 +232,9 @@ const won = computed(() => {
   for (const d of deals.value) {
     if (d.status !== 'Won') continue
     const amt = Number(d.custom_solaer_revenue) || 0
-    if (!d.expected_closure_date) continue
-    const y = Number(d.expected_closure_date.slice(0, 4))
-    const m = Number(d.expected_closure_date.slice(5, 7)) - 1
+    if (!d.closed_date) continue
+    const y = Number(d.closed_date.slice(0, 4))
+    const m = Number(d.closed_date.slice(5, 7)) - 1
     if (y === curYear) {
       res.anio.count++
       res.anio.monto += amt
@@ -230,9 +251,9 @@ const porCerrar = computed(() => {
   const res = { count: 0, monto: 0 }
   for (const d of deals.value) {
     if (d.status === 'Won' || d.status === 'Lost') continue
-    if (!d.expected_closure_date) continue
-    const y = Number(d.expected_closure_date.slice(0, 4))
-    const m = Number(d.expected_closure_date.slice(5, 7)) - 1
+    if (!d.closed_date) continue
+    const y = Number(d.closed_date.slice(0, 4))
+    const m = Number(d.closed_date.slice(5, 7)) - 1
     if (y === curYear && m === curMonth) {
       res.count++
       res.monto += Number(d.custom_solaer_revenue) || 0

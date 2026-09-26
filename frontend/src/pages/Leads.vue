@@ -300,6 +300,7 @@
     @columnWidthUpdated="() => triggerResize++"
     @updatePageCount="(count) => (updatedPageCount = count)"
     @applyFilter="(data) => viewControls.applyFilter(data)"
+    @contextFilter="(data) => viewControls.applyContextFilter(data)"
     @applyLikeFilter="(data) => viewControls.applyLikeFilter(data)"
     @likeDoc="(data) => viewControls.likeDoc(data)"
     @selectionsChanged="
@@ -339,6 +340,7 @@ import { useDoctypeModal } from '@/composables/doctypeModal'
 import { getMeta } from '@/stores/meta'
 import { globalStore } from '@/stores/global'
 import { usersStore } from '@/stores/users'
+import { setListNav } from '@/stores/listNav'
 import { statusesStore } from '@/stores/statuses'
 import { territoriesStore } from '@/stores/territories'
 import { industriesStore } from '@/stores/industries'
@@ -347,9 +349,9 @@ import { useBroadcast } from '@/composables/useBroadcast'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
 import { timestampCell } from '@/composables/useTimelinePreferences'
 import { useOnboarding, useTelemetry } from 'frappe-ui/frappe'
-import { Avatar, Tooltip, Dropdown, createResource, FeatherIcon, toast } from 'frappe-ui'
+import { Avatar, Tooltip, Dropdown, createResource, FeatherIcon, toast, call } from 'frappe-ui'
 import { useRoute } from 'vue-router'
-import { ref, computed, reactive, h, watch } from 'vue'
+import { ref, computed, reactive, h, watch, onMounted } from 'vue'
 
 const { getFormattedPercent, getFormattedFloat, getFormattedCurrency } =
   getMeta('CRM Lead')
@@ -409,6 +411,14 @@ watch(
         // ignore
       }
     }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => leads.value?.data?.data,
+  (data) => {
+    if (Array.isArray(data)) setListNav('CRM Lead', data.map((r) => r.name))
   },
   { immediate: true },
 )

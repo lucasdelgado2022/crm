@@ -156,7 +156,7 @@ function attachFile(file, i) {
   const args = {
     fileObj: file.fileObj || {},
     type: file.type,
-    private: file.private,
+    private: file.private ?? true,
     fileUrl: file.fileUrl,
     folder: props.options.folder,
     doctype: props.doctype,

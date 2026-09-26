@@ -1,6 +1,13 @@
 <template>
   <LayoutHeader>
     <template #left-header>
+      <Button
+        variant="ghost"
+        icon="lucide-arrow-left"
+        :tooltip="__('Volver')"
+        class="mr-1"
+        @click="goBack"
+      />
       <Breadcrumbs :items="breadcrumbs">
         <template #prefix="{ item }">
           <Icon v-if="item.icon" :icon="item.icon" class="mr-2 h-4" />
@@ -8,6 +15,22 @@
       </Breadcrumbs>
     </template>
     <template v-if="!errorTitle" #right-header>
+      <div v-if="prevId || nextId" class="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          icon="lucide-chevron-left"
+          :disabled="!prevId"
+          :tooltip="__('Anterior')"
+          @click="goToSibling(prevId)"
+        />
+        <Button
+          variant="ghost"
+          icon="lucide-chevron-right"
+          :disabled="!nextId"
+          :tooltip="__('Siguiente')"
+          @click="goToSibling(nextId)"
+        />
+      </div>
       <CustomActions
         v-if="document._actions?.length"
         :actions="document._actions"
@@ -23,6 +46,27 @@
         @done="onEnriched"
       />
       <AssignTo v-model="assignees.data" doctype="CRM Deal" :docname="dealId" />
+      <Button
+        :label="__('Nueva desde')"
+        iconLeft="copy"
+        :loading="cloning"
+        :title="__('Crear una nueva oportunidad con la misma empresa, contacto y responsable')"
+        @click="cloneDeal"
+      />
+      <Button
+        :label="__('Interacción')"
+        iconLeft="message-circle"
+        :tooltip="__('Agregar una interacción')"
+        @click="showInteractionModal = true"
+      />
+      <Button
+        v-if="nextStatus"
+        :label="__('Avanzar')"
+        iconRight="chevron-right"
+        variant="subtle"
+        :tooltip="__('Avanzar al siguiente estado') + ': ' + statusLabel(nextStatus)"
+        @click="advanceStatus"
+      />
       <Dropdown
         v-if="doc && document.statuses"
         :options="statuses"
@@ -45,10 +89,10 @@
   <div v-if="doc.name" class="flex h-full overflow-hidden">
     <div class="relative flex flex-1 flex-col overflow-hidden">
       <Tabs
-        v-model="tabIndex"
+        v-model="visibleIndex"
         as="div"
-        :tabs="tabs"
-        class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow [&_[role='tab']:nth-child(n+9)]:!hidden"
+        :tabs="visibleTabs"
+        class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
       >
         <template #tab-panel>
           <Activities
@@ -81,10 +125,21 @@
     </div>
     <Resizer side="right" class="flex flex-col justify-between border-l">
       <div
-        class="flex h-[45px] cursor-copy items-center border-b px-5 py-2.5 text-lg-medium text-ink-gray-9"
-        @click="copyToClipboard(doc.custom_numero_solaer || dealId)"
+        class="flex h-[45px] items-center gap-2 border-b px-5 py-2.5 text-lg-medium text-ink-gray-9"
       >
-        {{ doc.custom_numero_solaer || __(dealId) }}
+        <span
+          class="cursor-copy"
+          @click="copyToClipboard(doc.custom_numero_solaer || dealId)"
+        >
+          {{ doc.custom_numero_solaer || __(dealId) }}
+        </span>
+        <span
+          v-if="organization?.territory"
+          class="ml-auto flex items-center gap-1 rounded bg-surface-gray-2 px-2 py-0.5 text-sm font-normal text-ink-gray-7"
+          :title="__('País de la organización')"
+        >
+          {{ organization.territory }}
+        </span>
       </div>
       <div class="flex items-center justify-start gap-5 border-b p-5">
         <Tooltip :text="__('Organization Logo')">
@@ -174,7 +229,7 @@
         class="flex flex-1 flex-col overflow-y-auto"
       >
         <SidePanelLayout
-          :sections="sections.data"
+          :sections="visibleSections"
           :addContact="addContact"
           doctype="CRM Deal"
           :docname="dealId"
@@ -239,31 +294,50 @@
                         class="flex cursor-pointer items-center justify-between gap-2 pr-1 text-base leading-5 text-ink-gray-7"
                       >
                         <div
-                          class="flex h-7 items-center gap-2 truncate"
+                          class="min-w-0 flex-1"
                           @click="toggle()"
                         >
-                          <Avatar
-                            :label="contact.full_name"
-                            :image="contact.image"
-                            size="md"
-                          />
-                          <div class="truncate">
-                            {{ contact.full_name }}
+                          <div class="flex items-center gap-2 truncate">
+                            <Avatar
+                              :label="contact.full_name"
+                              :image="contact.image"
+                              size="md"
+                            />
+                            <div class="truncate">
+                              {{ contact.full_name }}
+                            </div>
+                            <template v-if="contactBadgeCount(contact) < 2">
+                              <Badge
+                                v-if="contact.is_primary"
+                                variant="outline"
+                                :label="__('Primary')"
+                                theme="green"
+                              />
+                              <Badge
+                                v-if="contactRoles[contact.name]?.rol"
+                                variant="subtle"
+                                :label="__(contactRoles[contact.name].rol)"
+                                theme="blue"
+                              />
+                            </template>
                           </div>
-                          <Badge
-                            v-if="contact.is_primary"
-                            class="ml-2"
-                            variant="outline"
-                            :label="__('Primary')"
-                            theme="green"
-                          />
-                          <Badge
-                            v-if="contactRoles[contact.name]?.rol"
-                            class="ml-1"
-                            variant="subtle"
-                            :label="__(contactRoles[contact.name].rol)"
-                            theme="blue"
-                          />
+                          <div
+                            v-if="contactBadgeCount(contact) >= 2"
+                            class="mt-1 flex flex-wrap items-center gap-1 pl-9"
+                          >
+                            <Badge
+                              v-if="contact.is_primary"
+                              variant="outline"
+                              :label="__('Primary')"
+                              theme="green"
+                            />
+                            <Badge
+                              v-if="contactRoles[contact.name]?.rol"
+                              variant="subtle"
+                              :label="__(contactRoles[contact.name].rol)"
+                              theme="blue"
+                            />
+                          </div>
                         </div>
                         <div class="flex items-center">
                           <Dropdown :options="contactOptions(contact)">
@@ -308,6 +382,13 @@
                       >
                         <PhoneIcon class="h-4 w-4" />
                         {{ contact.mobile_no }}
+                        <Button
+                          class="ml-auto"
+                          variant="ghost"
+                          :tooltip="__('Escribir por WhatsApp')"
+                          :icon="WhatsAppIcon"
+                          @click="openWhatsApp(contact.mobile_no)"
+                        />
                       </div>
                       <div
                         v-if="!contact.email && !contact.mobile_no"
@@ -337,6 +418,7 @@
           :docname="dealId"
         />
       </div>
+      <DealCommentsPanel :deal-id="dealId" />
     </Resizer>
   </div>
   <ErrorPage
@@ -353,6 +435,65 @@
       afterInsert: (_doc) => updateField('organization', _doc.name),
     }"
   />
+  <Dialog
+    v-model="showInteractionModal"
+    :options="{ title: __('Interacciones'), size: '4xl' }"
+  >
+    <template #body-content>
+      <div class="h-[65vh] overflow-hidden">
+        <InteractionArea doctype="CRM Deal" :docname="dealId" />
+      </div>
+    </template>
+  </Dialog>
+  <Dialog v-model="showWonModal" :options="{ title: __('Marcar como Ganada') }">
+    <template #body-content>
+      <div class="flex flex-col gap-3">
+        <div class="text-sm text-ink-gray-6">
+          {{ __('Para marcar esta oportunidad como Ganada es obligatorio adjuntar la Orden de Compra del cliente.') }}
+        </div>
+        <div
+          class="flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-6 text-center text-sm transition-colors"
+          :class="wonDragOver ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-outline-gray-3 text-ink-gray-5'"
+          @dragover.prevent="wonDragOver = true"
+          @dragleave.prevent="wonDragOver = false"
+          @drop.prevent="onWonDrop"
+        >
+          <div>{{ __('Arrastrá los archivos acá') }}</div>
+          <button
+            type="button"
+            class="font-medium text-blue-600 underline"
+            @click="wonInput?.click()"
+          >
+            {{ __('o elegí archivos') }}
+          </button>
+          <input ref="wonInput" type="file" multiple class="hidden" @change="onWonPick" />
+        </div>
+        <div v-if="wonFiles.length" class="flex flex-col gap-1">
+          <div
+            v-for="(f, i) in wonFiles"
+            :key="i"
+            class="flex items-center justify-between gap-2 rounded border px-2 py-1 text-sm text-ink-gray-7"
+          >
+            <span class="truncate">{{ f.name }}</span>
+            <Button
+              variant="ghost"
+              icon="lucide-x"
+              class="!h-6 !w-6"
+              @click="wonFiles.splice(i, 1)"
+            />
+          </div>
+        </div>
+      </div>
+    </template>
+    <template #actions>
+      <div class="flex justify-end gap-2">
+        <Button @click="showWonModal = false">{{ __('Cancelar') }}</Button>
+        <Button variant="solid" :loading="wonSaving" @click="confirmWon">
+          {{ __('Adjuntar y marcar Ganada') }}
+        </Button>
+      </div>
+    </template>
+  </Dialog>
   <ContactModal
     v-if="showContactModal"
     v-model="showContactModal"
@@ -401,6 +542,7 @@ import PeopleIcon from '@/components/Icons/PeopleIcon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
 import EventIcon from '@/components/Icons/EventIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
+import { openWhatsApp } from '@/utils'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
@@ -410,6 +552,7 @@ import ArrowUpRightIcon from '@/components/Icons/ArrowUpRightIcon.vue'
 import SuccessIcon from '@/components/Icons/SuccessIcon.vue'
 import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
+import InteractionArea from '@/components/Activities/InteractionArea.vue'
 import Activities from '@/components/Activities/Activities.vue'
 import OrganizationModal from '@/components/Modals/OrganizationModal.vue'
 import LostReasonModal from '@/components/Modals/LostReasonModal.vue'
@@ -419,6 +562,7 @@ import ContactModal from '@/components/Modals/ContactModal.vue'
 import Link from '@/components/Controls/Link.vue'
 import CollapsibleSection from '@/components/CollapsibleSection.vue'
 import SidePanelLayout from '@/components/SidePanelLayout.vue'
+import DealCommentsPanel from '@/components/DealCommentsPanel.vue'
 import DealDataSidePanel from '@/components/DealDataSidePanel.vue'
 import SLASection from '@/components/SLASection.vue'
 import CustomActions from '@/components/CustomActions.vue'
@@ -433,6 +577,7 @@ import { getView } from '@/utils/view'
 import { getSettings } from '@/stores/settings'
 import { globalStore } from '@/stores/global'
 import { statusesStore } from '@/stores/statuses'
+import { listNavStore } from '@/stores/listNav'
 import { getMeta } from '@/stores/meta'
 import { useDocument } from '@/data/document'
 import { whatsappEnabled } from '@/composables/whatsapp'
@@ -448,6 +593,7 @@ import {
   call,
   usePageMeta,
   toast,
+  Dialog,
 } from 'frappe-ui'
 import { useOnboarding } from 'frappe-ui/frappe'
 import {
@@ -461,6 +607,7 @@ import {
 } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useActiveTabManager } from '@/composables/useActiveTabManager'
+import { useUnsavedChangesWarning } from '@/composables/useUnsavedChangesWarning'
 
 const { on } = useBroadcast()
 const { brand } = getSettings()
@@ -473,6 +620,16 @@ const { updateOnboardingStep, isOnboardingStepsCompleted } =
 
 const route = useRoute()
 const router = useRouter()
+function goBack() {
+  router.back()
+}
+
+const _listNav = listNavStore()
+const prevId = computed(() => _listNav.prevOf('CRM Deal', props.dealId))
+const nextId = computed(() => _listNav.nextOf('CRM Deal', props.dealId))
+function goToSibling(id) {
+  if (id) router.push({ name: 'Deal', params: { dealId: id } })
+}
 
 function openOrganization() {
   if (doc.value?.organization)
@@ -503,6 +660,8 @@ const {
 const canDelete = computed(() => permissions.data?.permissions?.delete || false)
 
 const doc = computed(() => document.doc || {})
+
+useUnsavedChangesWarning(() => document.isDirty)
 
 watch(error, (err) => {
   if (err) {
@@ -594,7 +753,11 @@ const breadcrumbs = computed(() => {
 
   items.push({
     label: title.value,
-    route: { name: 'Deal', params: { dealId: props.dealId } },
+    route: {
+      name: 'Deal',
+      params: { dealId: props.dealId },
+      query: route.query,
+    },
   })
   return items
 })
@@ -627,19 +790,10 @@ const tabs = computed(() => {
       icon: DetailsIcon,
     },
     {
-      name: 'Notes',
-      label: __('Notes'),
-      icon: NoteIcon,
-    },
-    {
-      name: 'Attachments',
-      label: __('Attachments'),
-      icon: AttachmentIcon,
-    },
-    {
       name: 'Comments',
       label: __('Comments'),
       icon: CommentIcon,
+      secondary: true,
     },
     {
       name: 'Interactions',
@@ -647,22 +801,34 @@ const tabs = computed(() => {
       icon: PeopleIcon,
     },
     {
+      name: 'Requerimiento',
+      label: __('Requerimiento'),
+      icon: 'lucide-clipboard-list',
+    },
+    {
+      name: 'Attachments',
+      label: __('Attachments'),
+      icon: AttachmentIcon,
+    },
+    {
       name: 'Riesgos',
       label: __('Riesgos'),
       icon: 'lucide-shield-alert',
+      secondary: true,
     },
     {
       name: 'Roadmap',
       label: __('Roadmap'),
       icon: 'lucide-milestone',
-    },
-    // --- secundarios (agrupados en "Más") ---
-    {
-      name: 'Comisiones',
-      label: __('Comisiones'),
-      icon: 'lucide-hand-coins',
       secondary: true,
     },
+    {
+      name: 'EstadoVenta',
+      label: __('Estado de Venta'),
+      icon: 'lucide-clipboard-list',
+      condition: () => getDealStatus(document.doc?.status)?.type === 'Won',
+    },
+    // --- secundarios (agrupados en "Más") ---
     {
       name: 'Tasks',
       label: __('Tasks'),
@@ -725,6 +891,21 @@ const activeSecondaryLabel = computed(() => {
 const { tabIndex } = useActiveTabManager(tabs, 'lastDealTab')
 const activeTabName = computed(() => tabs.value?.[tabIndex.value]?.name)
 
+// La barra muestra solo tabs primarios; los secundarios viven en el desplegable "Más".
+const visibleTabs = computed(() => tabs.value.filter((t) => !t.secondary))
+const visibleIndex = computed({
+  get() {
+    const cur = tabs.value[tabIndex.value]
+    const i = visibleTabs.value.findIndex((t) => t.name === cur?.name)
+    return i < 0 ? 0 : i
+  },
+  set(vi) {
+    const name = visibleTabs.value[vi]?.name
+    const fi = tabs.value.findIndex((t) => t.name === name)
+    if (fi >= 0) tabIndex.value = fi
+  },
+})
+
 const sections = createResource({
   url: 'crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_sidepanel_sections',
   params: { doctype: 'CRM Deal' },
@@ -734,6 +915,26 @@ const sections = createResource({
 on('reload-deal-sections', () => sections.reload())
 
 if (!sections.data) sections.fetch()
+
+// Ocultar campos de pérdida (Reason Lost / Lost Notes) salvo que el status sea Lost.
+const LOST_FIELDS = ['lost_reason', 'lost_notes']
+const visibleSections = computed(() => {
+  const data = sections.data
+  if (!data) return data
+  if (getDealStatus(document.doc?.status)?.type === 'Lost') return data
+  const strip = (fields) =>
+    (fields || []).filter((f) => !LOST_FIELDS.includes(f.fieldname))
+  return data.map((sec) => {
+    const out = { ...sec }
+    if (Array.isArray(out.columns)) {
+      out.columns = out.columns.map((col) => ({ ...col, fields: strip(col.fields) }))
+    }
+    if (Array.isArray(out.fields)) {
+      out.fields = strip(out.fields)
+    }
+    return out
+  })
+})
 
 function getParsedSections(_sections) {
   _sections.forEach((section) => {
@@ -777,7 +978,7 @@ function contactOptions(contact) {
   }
 
   const currentRole = contactRoles.value[contact.name]?.rol
-  ;['Champion', 'Sponsor', 'Decision Maker'].forEach((rol) => {
+  ;['Champion', 'Sponsor', 'Decision Maker', 'Usuario', 'Comprador', 'Sistemas'].forEach((rol) => {
     options.push({
       label: __(rol),
       icon: currentRole === rol ? 'check' : 'user',
@@ -828,6 +1029,12 @@ async function setPrimaryContact(contact) {
 }
 
 const contactRoles = ref({})
+function contactBadgeCount(contact) {
+  let n = 0
+  if (contact.is_primary) n++
+  if (contactRoles.value[contact.name]?.rol) n++
+  return n
+}
 
 const dealContacts = createResource({
   url: 'crm.fcrm.doctype.crm_deal.api.get_deal_contacts',
@@ -843,6 +1050,54 @@ const dealContacts = createResource({
 })
 
 if (!dealContacts.data) dealContacts.fetch()
+
+// Crear una nueva oportunidad a partir de esta (empresa + contactos + responsables)
+const cloning = ref(false)
+function stripChildRows(rows) {
+  const drop = new Set([
+    'name', 'owner', 'creation', 'modified', 'modified_by', 'docstatus',
+    'idx', 'parent', 'parentfield', 'parenttype', 'doctype',
+    '__islocal', '__unsaved', '__last_sync_on',
+  ])
+  return (rows || []).map((r) => {
+    const o = {}
+    for (const k in r) if (!drop.has(k)) o[k] = r[k]
+    return o
+  })
+}
+async function cloneDeal() {
+  if (cloning.value) return
+  cloning.value = true
+  try {
+    const contacts = (dealContacts.data || []).map((c) => ({
+      contact: c.contact,
+      is_primary: c.is_primary ? 1 : 0,
+      custom_rol: (contactRoles.value?.[c.contact]?.rol) || '',
+    }))
+    const newDoc = {
+      doctype: 'CRM Deal',
+      organization: doc.value.organization || '',
+      organization_name: doc.value.organization_name || '',
+      deal_owner: doc.value.deal_owner || '',
+      custom_apoyo_comercial: stripChildRows(doc.value.custom_apoyo_comercial),
+      custom_responsable_implementacion: stripChildRows(
+        doc.value.custom_responsable_implementacion,
+      ),
+      contacts,
+    }
+    const primary = (dealContacts.data || []).find((c) => c.is_primary)
+    if (primary?.contact) newDoc.contact = primary.contact
+    const created = await call('frappe.client.insert', { doc: newDoc })
+    toast.success(__('Nueva oportunidad creada desde esta'))
+    router.push({ name: 'Deal', params: { dealId: created.name } })
+  } catch (e) {
+    toast.error(
+      (e && e.messages && e.messages[0]) || __('No se pudo crear la oportunidad'),
+    )
+  } finally {
+    cloning.value = false
+  }
+}
 
 async function loadContactRoles() {
   try {
@@ -908,9 +1163,102 @@ function triggerCall() {
   makeCall(mobile_no)
 }
 
+const showInteractionModal = ref(false)
+
+// Botón "Avanzar": pasa al siguiente estado del pipeline según posición.
+const orderedStatusNames = computed(() => {
+  const list =
+    (document.statuses?.length ? document.statuses : document._statuses) || []
+  const names = list
+    .map((s) => (typeof s === 'string' ? s : s?.name || s?.value))
+    .filter(Boolean)
+  return names.sort(
+    (a, b) =>
+      (getDealStatus(a)?.position ?? 999) - (getDealStatus(b)?.position ?? 999),
+  )
+})
+const nextStatus = computed(() => {
+  const ordered = orderedStatusNames.value
+  const i = ordered.indexOf(doc.value?.status)
+  if (i >= 0 && i < ordered.length - 1) return ordered[i + 1]
+  return null
+})
+function advanceStatus() {
+  if (!nextStatus.value) {
+    toast.error(__('No hay un estado siguiente'))
+    return
+  }
+  triggerStatusChange(nextStatus.value)
+}
+
+const showWonModal = ref(false)
+const pendingWonStatus = ref('')
+const wonFiles = ref([])
+const wonDragOver = ref(false)
+const wonInput = ref(null)
+const wonSaving = ref(false)
+function onWonPick(e) {
+  wonFiles.value.push(...Array.from(e.target.files || []))
+  e.target.value = ''
+}
+function onWonDrop(e) {
+  wonDragOver.value = false
+  wonFiles.value.push(...Array.from(e.dataTransfer.files || []))
+}
 async function triggerStatusChange(value) {
+  if (getDealStatus(value)?.type === 'Won') {
+    pendingWonStatus.value = value
+    wonFiles.value = []
+    showWonModal.value = true
+    return
+  }
   await triggerOnChange('status', value)
   setLostReason()
+}
+async function confirmWon() {
+  if (!wonFiles.value.length) {
+    toast.error(__('Adjuntá la Orden de Compra'))
+    return
+  }
+  wonSaving.value = true
+  try {
+    for (const file of wonFiles.value) {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('doctype', 'CRM Deal')
+      fd.append('docname', props.dealId)
+      fd.append('is_private', '1')
+      const res = await fetch('/api/method/upload_file', {
+        method: 'POST',
+        headers: { 'X-Frappe-CSRF-Token': window.csrf_token || '' },
+        body: fd,
+      })
+      if (!res.ok) throw new Error('upload failed')
+      const j = await res.json()
+      const fname = j && j.message && j.message.name
+      if (fname) {
+        try {
+          await call('frappe.client.set_value', {
+            doctype: 'File',
+            name: fname,
+            fieldname: 'custom_destacado',
+            value: 1,
+          })
+        } catch (e) {
+          // noop
+        }
+      }
+    }
+    await triggerOnChange('status', pendingWonStatus.value)
+    setLostReason()
+    showWonModal.value = false
+    wonFiles.value = []
+    toast.success(__('Orden de Compra adjuntada · Oportunidad Ganada'))
+  } catch (e) {
+    toast.error(__('No se pudo adjuntar la Orden de Compra'))
+  } finally {
+    wonSaving.value = false
+  }
 }
 
 function updateField(name, value) {

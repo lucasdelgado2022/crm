@@ -3,6 +3,20 @@
     <template #left-header>
       <Breadcrumbs :items="breadcrumbs" />
     </template>
+    <template #right-header>
+      <Dropdown
+        :options="[
+          { label: __('Editar'), icon: 'edit', onClick: openEdit },
+          { label: __('Eliminar'), icon: 'trash-2', onClick: deleteSoftware },
+        ]"
+      >
+        <Button variant="ghost">
+          <template #icon>
+            <FeatherIcon name="more-horizontal" class="h-4 w-4" />
+          </template>
+        </Button>
+      </Dropdown>
+    </template>
   </LayoutHeader>
 
   <div v-if="softwareName" ref="parentRef" class="flex h-full">
@@ -159,6 +173,29 @@
     v-model="showOrganizationModal"
     :options="{ redirect: false, afterInsert: (d) => linkNew('Organizations', d.name) }"
   />
+  <Dialog
+    v-model="showEditModal"
+    :options="{ title: __('Editar Software'), size: 'sm' }"
+  >
+    <template #body-content>
+      <div class="flex flex-col gap-3">
+        <FormControl type="text" :label="__('Nombre')" v-model="editForm.name" />
+        <FormControl
+          type="text"
+          :label="__('Dominio')"
+          v-model="editForm.dominio"
+        />
+      </div>
+    </template>
+    <template #actions>
+      <div class="flex justify-end gap-2">
+        <Button @click="showEditModal = false">{{ __('Cancelar') }}</Button>
+        <Button variant="solid" :loading="saving" @click="saveEdit">
+          {{ __('Guardar') }}
+        </Button>
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
@@ -183,14 +220,20 @@ import {
   call,
   toast,
   usePageMeta,
+  Dropdown,
+  Dialog,
+  FormControl,
+  Button,
 } from 'frappe-ui'
 import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 const props = defineProps({
   softwareId: { type: String, required: true },
 })
 
 const softwareName = ref('')
+const softwareDominio = ref('')
 const primaryOrg = ref('')
 const orgChild = ref([])
 const contactChild = ref([])
@@ -209,6 +252,7 @@ async function loadSoftware() {
     name: props.softwareId,
   })
   softwareName.value = doc.software_name || doc.name
+  softwareDominio.value = doc.custom_dominio || ''
   primaryOrg.value =
     doc.organization || (doc.organizations && doc.organizations[0]?.organization) || ''
   orgChild.value = doc.organizations || []
@@ -243,6 +287,68 @@ const breadcrumbs = computed(() => [
 
 const softwareMapQuery = computed(() => primaryOrg.value || '')
 
+const router = useRouter()
+const showEditModal = ref(false)
+const saving = ref(false)
+const editForm = ref({ name: '', dominio: '' })
+
+function openEdit() {
+  editForm.value = { name: softwareName.value, dominio: softwareDominio.value }
+  showEditModal.value = true
+}
+
+async function saveEdit() {
+  const newName = (editForm.value.name || '').trim()
+  if (!newName) {
+    toast.error(__('El nombre no puede estar vacío'))
+    return
+  }
+  saving.value = true
+  try {
+    if ((editForm.value.dominio || '') !== softwareDominio.value) {
+      await call('frappe.client.set_value', {
+        doctype: 'Software',
+        name: props.softwareId,
+        fieldname: 'custom_dominio',
+        value: editForm.value.dominio || '',
+      })
+    }
+    if (newName !== softwareName.value) {
+      await call('frappe.model.rename_doc.update_document_title', {
+        doctype: 'Software',
+        docname: props.softwareId,
+        name: newName,
+        title: newName,
+      })
+      showEditModal.value = false
+      router.replace({ name: 'SoftwareDetail', params: { softwareId: newName } })
+      return
+    }
+    showEditModal.value = false
+    await loadSoftware()
+    toast.success(__('Software actualizado'))
+  } catch (e) {
+    toast.error((e && e.messages && e.messages[0]) || __('No se pudo guardar'))
+  } finally {
+    saving.value = false
+  }
+}
+
+async function deleteSoftware() {
+  if (!window.confirm(__('¿Eliminar este software? Esta acción no se puede deshacer.')))
+    return
+  try {
+    await call('frappe.client.delete', {
+      doctype: 'Software',
+      name: props.softwareId,
+    })
+    toast.success(__('Software eliminado'))
+    router.replace({ name: 'Software' })
+  } catch (e) {
+    toast.error((e && e.messages && e.messages[0]) || __('No se pudo eliminar'))
+  }
+}
+
 const tabIndex = ref(0)
 const tabs = [
   {
@@ -254,11 +360,6 @@ const tabs = [
     label: 'Contacts',
     icon: ContactsIcon,
     count: computed(() => contactChild.value.length),
-  },
-  {
-    label: 'Datos',
-    icon: LucideMapPin,
-    count: computed(() => ''),
   },
 ]
 

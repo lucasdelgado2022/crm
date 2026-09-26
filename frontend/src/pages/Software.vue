@@ -90,31 +90,15 @@ const softwareList = createListResource({
 })
 
 async function loadCounts() {
-  const build = (data) => {
-    const map = {}
-    for (const r of data || []) map[r.parent] = (map[r.parent] || 0) + 1
-    return map
-  }
+  // Server Script (frappe.get_all) que evita el bloqueo de child doctypes (istable)
+  // de frappe.client.get_list en v16 para usuarios que no son System Manager.
   try {
-    const orgs = await call('frappe.client.get_list', {
-      doctype: 'Software Organization',
-      filters: { parenttype: 'Software' },
-      fields: ['parent'],
-      limit_page_length: 0,
-    })
-    orgCounts.value = build(orgs)
+    const r = await call('software_counts')
+    const data = r?.message || r || {}
+    orgCounts.value = data.orgs || {}
+    contactCounts.value = data.contacts || {}
   } catch (e) {
     orgCounts.value = {}
-  }
-  try {
-    const contacts = await call('frappe.client.get_list', {
-      doctype: 'Software Contact',
-      filters: { parenttype: 'Software' },
-      fields: ['parent'],
-      limit_page_length: 0,
-    })
-    contactCounts.value = build(contacts)
-  } catch (e) {
     contactCounts.value = {}
   }
 }

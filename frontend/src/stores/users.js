@@ -20,6 +20,8 @@ export const usersStore = defineStore('crm-users', () => {
     initialData: [],
     auto: true,
     transform([allUsers, crmUsers]) {
+      allUsers = normalizeUsers(allUsers)
+      crmUsers = normalizeUsers(crmUsers)
       for (let user of allUsers) {
         usersByName[user.name] = user
         if (user.name === 'Administrator') {
@@ -38,6 +40,32 @@ export const usersStore = defineStore('crm-users', () => {
     },
   })
 
+  // Colores de avatar por usuario (custom_avatar_color)
+  const avatarColors = reactive({})
+  createResource({
+    url: 'frappe.client.get_list',
+    params: {
+      doctype: 'User',
+      filters: { custom_avatar_color: ['is', 'set'] },
+      fields: ['name', 'custom_avatar_color'],
+      limit_page_length: 0,
+    },
+    auto: true,
+    onSuccess(data) {
+      for (const row of data || [])
+        if (row.custom_avatar_color) avatarColors[row.name] = row.custom_avatar_color
+    },
+  })
+  function getUserColor(name) {
+    const key = !name || name === 'sessionUser' ? session.user : name
+    return avatarColors[key] || null
+  }
+  function setUserColorLocal(name, color) {
+    const key = !name || name === 'sessionUser' ? session.user : name
+    if (color) avatarColors[key] = color
+    else delete avatarColors[key]
+  }
+
   // Background full-list fetch fired on browser idle. Only System Manager
   // sessions receive a larger payload here; for others the server returns
   // the same crm-users-only list. Populates usersByName so existing
@@ -49,6 +77,7 @@ export const usersStore = defineStore('crm-users', () => {
     cache: 'crm-users-full',
     auto: false,
     transform([allUsers]) {
+      allUsers = normalizeUsers(allUsers)
       for (let user of allUsers) {
         // upgrade partial get_user_info so always full record is used
         const existing = usersByName[user.name]
@@ -99,7 +128,7 @@ export const usersStore = defineStore('crm-users', () => {
         auto: false,
       })
       const records = await r.fetch()
-      for (const u of records || []) {
+      for (const u of normalizeUsers(records || [])) {
         usersByName[u.name] = { ...usersByName[u.name], ...u }
       }
     } catch (e) {
@@ -165,6 +194,8 @@ export const usersStore = defineStore('crm-users', () => {
 
   return {
     users,
+    getUserColor,
+    setUserColorLocal,
     usersFull,
     allUsers: computed(() => usersFull.data?.allUsers || users.data?.allUsers),
     crmUsers: computed(() => users.data?.crmUsers),
@@ -178,3 +209,20 @@ export const usersStore = defineStore('crm-users', () => {
     isCrmUser,
   }
 })
+
+function normalizeUsers(users) {
+  return (users || []).filter(Boolean).map((user) => normalizeUser(user))
+}
+
+function normalizeUser(user) {
+  const name = user.name || user.email || ''
+  const email = user.email || name
+  const fallbackName = name || email
+
+  return {
+    ...user,
+    name,
+    email,
+    full_name: user.full_name?.trim() || fallbackName,
+  }
+}

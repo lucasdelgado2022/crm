@@ -24,16 +24,18 @@
         v-for="column in columns"
         :key="column.key"
         :item="column"
-        @columnWidthUpdated="emit('columnWidthUpdated', column)"
+        @columnWidthUpdated="(e) => onColumnWidthUpdated(e, column)"
       >
         <Button
           v-if="column.key == '_liked_by'"
-          variant="ghosted"
+          variant="ghost"
           class="!h-4"
-          :class="isLikeFilterApplied ? 'fill-red-500' : 'fill-white'"
           @click="() => emit('applyLikeFilter')"
         >
-          <HeartIcon class="h-4 w-4" />
+          <HeartIcon
+            class="h-4 w-4"
+            :class="isLikeFilterApplied ? 'fill-red-500 text-red-500' : ''"
+          />
         </Button>
       </ListHeaderItem>
     </ListHeader>
@@ -46,22 +48,33 @@
         <template #prefix>
           <div
             v-if="column.key === '_assign'"
-            class="flex items-center truncate"
+            class="flex items-center gap-1.5"
           >
-            <MultipleAvatar
-              :avatars="item"
-              size="sm"
-              @click="
-                (event) =>
-                  emit('applyFilter', {
-                    event,
-                    idx,
-                    column,
-                    item,
-                    firstColumn: columns[0],
-                  })
-              "
-            />
+            <Tooltip
+              v-if="ownerMap[row.name] || row.lead_owner"
+              :text="__('Responsable') + ': ' + userLabel(ownerMap[row.name] || row.lead_owner)"
+            >
+              <div class="rounded-full ring-2 ring-blue-500">
+                <UserAvatar
+                  :user="ownerMap[row.name] || row.lead_owner"
+                  size="sm"
+                />
+              </div>
+            </Tooltip>
+            <div
+              v-if="otherAssignees(item, ownerMap[row.name] || row.lead_owner).length"
+              class="flex shrink-0 items-center -space-x-1.5"
+            >
+              <Tooltip
+                v-for="u in otherAssignees(item, ownerMap[row.name] || row.lead_owner)"
+                :key="u.name"
+                :text="userLabel(u.name)"
+              >
+                <div class="rounded-full ring-2 ring-sky-300">
+                  <UserAvatar :user="u.name" size="sm" />
+                </div>
+              </Tooltip>
+            </div>
           </div>
           <div v-else-if="column.key === 'status'">
             <IndicatorIcon :class="item.color" />
@@ -78,14 +91,13 @@
               size="sm"
             />
           </div>
-          <div v-else-if="column.key === 'lead_owner'">
-            <Avatar
-              v-if="item.full_name"
-              class="flex items-center"
-              :image="item.user_image"
-              :label="item.full_name"
-              size="sm"
-            />
+          <div
+            v-else-if="column.key === 'lead_owner'"
+            class="flex items-center gap-1.5"
+          >
+            <template v-if="row.lead_owner">
+              <UserAvatar :user="row.lead_owner" size="sm" />
+            </template>
           </div>
           <div v-else-if="column.key === 'mobile_no' && item">
             <PhoneIcon class="h-4 w-4" />
@@ -157,9 +169,7 @@
           </div>
           <div v-else-if="column.key === '_liked_by'">
             <Button
-              v-if="column.key == '_liked_by'"
-              variant="ghosted"
-              :class="isLiked(item) ? 'fill-red-500' : 'fill-white'"
+              variant="ghost"
               @click.stop.prevent="
                 () =>
                   emit('likeDoc', {
@@ -168,7 +178,10 @@
                   })
               "
             >
-              <HeartIcon class="h-4 w-4" />
+              <HeartIcon
+                class="h-4 w-4"
+                :class="isLiked(item) ? 'fill-red-500 text-red-500' : ''"
+              />
             </Button>
           </div>
           <div
@@ -221,6 +234,7 @@
           <div
             v-else-if="label"
             class="truncate text-base"
+            @contextmenu="(e) => openCtx(e, column, item, row)"
             @click="
               (event) =>
                 emit('applyFilter', {
@@ -238,6 +252,7 @@
         </template>
       </ListRowItem>
     </ListRows>
+    <ContextFilterMenu ref="ctxMenu" />
     <ListSelectBanner>
       <template #actions="{ selections, unselectAll }">
         <Dropdown
@@ -270,8 +285,10 @@ import EmailIcon from '@/components/Icons/EmailIcon.vue'
 import { FeatherIcon } from 'frappe-ui'
 import RatingInput from '@/components/Controls/RatingInput.vue'
 import MultipleAvatar from '@/components/MultipleAvatar.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
 import ListRows from '@/components/ListViews/ListRows.vue'
+import ContextFilterMenu from '@/components/ContextFilterMenu.vue'
 import InlineEditCell from '@/components/ListViews/InlineEditCell.vue'
 import { isTranslatable, formatDuration } from '@/utils'
 import {
@@ -287,10 +304,25 @@ import {
   call,
 } from 'frappe-ui'
 import { sessionStore } from '@/stores/session'
+import { usersStore } from '@/stores/users'
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
+const { getUser } = usersStore()
+function userLabel(u) {
+  if (!u) return ''
+  return getUser(u)?.full_name || u
+}
+function userImage(u) {
+  if (!u) return ''
+  return getUser(u)?.user_image || ''
+}
+function otherAssignees(assignees, owner) {
+  return (assignees || []).filter((u) => u && u.name && u.name !== owner)
+}
+
 const ageMap = ref({})
+const ownerMap = ref({})
 const contactMap = ref({})
 function daysSince(dt) {
   if (!dt) return null
@@ -315,26 +347,30 @@ async function loadAges(rows) {
   if (!names.length) {
     ageMap.value = {}
     contactMap.value = {}
+    ownerMap.value = {}
     return
   }
   try {
     const leads = await call('frappe.client.get_list', {
       doctype: 'CRM Lead',
       filters: { name: ['in', names] },
-      fields: ['name', 'creation', 'email', 'mobile_no'],
+      fields: ['name', 'creation', 'email', 'mobile_no', 'lead_owner'],
       limit_page_length: 0,
     })
     const gm = {}
     const cm = {}
+    const om = {}
     for (const r of leads || []) {
       gm[r.name] = daysSince(r.creation)
       cm[r.name] = {
         email: r.email,
         phone: r.mobile_no,
       }
+      om[r.name] = r.lead_owner
     }
     ageMap.value = gm
     contactMap.value = cm
+    ownerMap.value = om
   } catch (e) {
     // silencioso
   }
@@ -357,6 +393,7 @@ const props = defineProps({
   },
 })
 const emit = defineEmits([
+  'contextFilter',
   'loadMore',
   'updatePageCount',
   'columnWidthUpdated',
@@ -380,6 +417,10 @@ const list = defineModel('list', { type: Object })
 
 function reloadList() {
   list.value?.reload?.()
+}
+function onColumnWidthUpdated({ width, save }, column) {
+  column.width = width
+  if (save) emit('columnWidthUpdated', column)
 }
 
 function getLabel(label, column) {
@@ -413,4 +454,36 @@ defineExpose({
     () => listBulkActionsRef.value?.customListActions,
   ),
 })
+
+const ctxMenu = ref(null)
+const CTX_FIELDS = ['organization', 'custom_producto', 'status']
+function ctxDisplay(column, item, row) {
+  if (item && typeof item === 'object') return item.label || item.value || row?.[column.key]
+  return item != null && item !== '' ? item : row?.[column.key]
+}
+function openCtx(e, column, item, row) {
+  if (!column || !CTX_FIELDS.includes(column.key)) return
+  const raw = item && typeof item === 'object' ? (item.value ?? item.name ?? item.label) : item
+  const value = raw != null && raw !== '' ? raw : row?.[column.key]
+  e.preventDefault()
+  e.stopPropagation()
+  const disp = ctxDisplay(column, item, row)
+  const options = []
+  if (value !== undefined && value !== null && value !== '') {
+    options.push({
+      label: __('Filtrar por') + ' \u00ab' + disp + '\u00bb',
+      onClick: () => emit('contextFilter', { fieldname: column.key, value, operator: 'eq' }),
+    })
+    options.push({
+      label: __('Excluir') + ' \u00ab' + disp + '\u00bb',
+      onClick: () => emit('contextFilter', { fieldname: column.key, value, operator: 'ne' }),
+    })
+  }
+  options.push({
+    label: __('Quitar filtro de este campo'),
+    onClick: () => emit('contextFilter', { fieldname: column.key, value: null, operator: 'clear' }),
+  })
+  ctxMenu.value?.open({ x: e.clientX, y: e.clientY, options })
+}
+
 </script>

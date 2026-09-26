@@ -250,7 +250,7 @@ async function onNewVersionSelected(event) {
   try {
     const fd = new FormData()
     fd.append('file', file, file.name)
-    fd.append('is_private', '0')
+    fd.append('is_private', '1')
     fd.append('folder', 'Home/Attachments')
     fd.append('doctype', props.doctype)
     fd.append('docname', props.docname)

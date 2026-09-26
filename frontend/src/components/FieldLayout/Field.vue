@@ -153,7 +153,7 @@
       </template>
       <template #item-label="{ option }">
         <Tooltip :text="option.value">
-          <div class="cursor-pointer">
+          <div class="cursor-pointer text-ink-gray-9">
             {{ getUser(option.value).full_name }}
           </div>
         </Tooltip>
@@ -300,6 +300,13 @@
         :value="data[field.fieldname]"
         :disabled="Boolean(field.read_only)"
         :description="field.description"
+        :error="
+          field.options === 'Phone' &&
+          Boolean(data[field.fieldname]) &&
+          !validatePhone(data[field.fieldname])
+            ? __('Enter a valid phone number')
+            : undefined
+        "
         @change="fieldChange($event.target.value, field)"
       />
       <ArrowUpRightIcon
@@ -336,6 +343,7 @@ import {
   evaluateDependsOnValue,
   isNull,
   interpolateTemplate,
+  validatePhone,
 } from '@/utils'
 import { flt, formatNumber, formatCurrency } from '@/utils/numberFormat.js'
 import { getMeta } from '@/stores/meta'

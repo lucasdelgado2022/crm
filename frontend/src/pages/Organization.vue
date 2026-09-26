@@ -1,6 +1,13 @@
 <template>
   <LayoutHeader v-if="organization.doc">
     <template #left-header>
+      <Button
+        variant="ghost"
+        icon="lucide-arrow-left"
+        :tooltip="__('Volver')"
+        class="mr-1"
+        @click="goBack"
+      />
       <Breadcrumbs :items="breadcrumbs">
         <template #prefix="{ item }">
           <Icon v-if="item.icon" :icon="item.icon" class="mr-2 h-4" />
@@ -148,96 +155,91 @@
       </div>
     </Resizer>
     <div class="flex flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5">
-      <!-- Widget: Plataformas y Comunidades -->
-      <div class="shrink-0 rounded-lg border">
-        <div
-          class="flex items-center gap-2 border-b px-4 py-3 text-base font-semibold text-ink-gray-8"
+      <!-- Barra de pestañas del perfil -->
+      <div
+        class="flex shrink-0 items-center gap-1 border-b border-outline-gray-2"
+      >
+        <button
+          v-for="t in orgTabs"
+          :key="t.name"
+          class="border-b-2 px-3 py-2 text-base transition-colors"
+          :class="
+            orgTab === t.name
+              ? 'border-ink-gray-9 font-medium text-ink-gray-9'
+              : 'border-transparent text-ink-gray-5 hover:text-ink-gray-8'
+          "
+          @click="orgTab = t.name"
         >
-          <FeatherIcon name="link-2" class="h-5" />
-          {{ __('Plataformas y Comunidades') }}
-        </div>
-        <div class="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4">
-          <a
-            v-for="l in plataformaLinks"
-            :key="l.key"
-            :href="l.url || undefined"
-            :target="l.url ? '_blank' : undefined"
-            rel="noopener noreferrer"
-            class="flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center"
-            :class="
-              l.url
-                ? 'cursor-pointer hover:border-outline-gray-3 hover:bg-surface-gray-1'
-                : 'cursor-default opacity-50'
-            "
-            @click="!l.url && $event.preventDefault()"
-          >
-            <FeatherIcon
-              :name="l.icon"
-              class="h-5 w-5"
-              :class="l.url ? 'text-ink-gray-7' : 'text-ink-gray-4'"
-            />
-            <span class="text-sm text-ink-gray-8">{{ l.label }}</span>
-            <span
-              class="text-xs"
-              :class="l.url ? 'text-blue-600' : 'text-ink-gray-4'"
-            >
-              {{ l.url ? __('Abrir') : __('sin configurar') }}
-            </span>
-          </a>
-        </div>
+          {{ __(t.label) }}
+        </button>
       </div>
 
-      <!-- Widget: Campañas BDR -->
-      <div class="shrink-0 rounded-lg border">
+      <template v-if="orgTab === 'general'">
+      <!-- Widget general: métricas de la organización -->
+      <div class="grid shrink-0 grid-cols-2 gap-4 sm:grid-cols-5">
         <div
-          class="flex items-center justify-between gap-2 border-b px-4 py-3"
+          class="flex flex-col justify-center rounded-lg border p-4"
+          :class="conActividad ? 'border-green-300 bg-green-50' : 'border-outline-gray-2 bg-surface-gray-2'"
         >
           <div
-            class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
+            class="flex items-center gap-1.5 text-base font-semibold"
+            :class="conActividad ? 'text-green-700' : 'text-ink-gray-6'"
           >
-            <FeatherIcon name="target" class="h-5" />
-            {{ __('Campañas BDR') }}
-            <Badge variant="subtle" theme="gray" size="sm">
-              {{ bdrCampaigns.length }}
-            </Badge>
+            <FeatherIcon :name="conActividad ? 'activity' : 'moon'" class="h-4 w-4" />
+            {{ conActividad ? __('Con actividad') : __('Sin actividad') }}
           </div>
-          <Dropdown v-if="bdrAddOptions.length" :options="bdrAddOptions">
-            <Button variant="outline">
-              <template #prefix>
-                <FeatherIcon name="plus" class="h-4" />
-              </template>
-              {{ __('Agregar Campaña BDR') }}
-            </Button>
-          </Dropdown>
+          <div class="mt-0.5 text-xs text-ink-gray-5">{{ __('leads / oport. activas') }}</div>
         </div>
-        <div class="flex flex-wrap gap-2 p-3">
-          <span
-            v-for="c in bdrCampaigns"
-            :key="c"
-            class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
-          >
-            {{ c }}
-            <button
-              :title="__('Quitar')"
-              @click="removeBdr(c)"
-            >
-              <FeatherIcon
-                name="x"
-                class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6"
-              />
-            </button>
-          </span>
-          <span
-            v-if="!bdrCampaigns.length"
-            class="py-1 text-sm text-ink-gray-4"
-          >
-            {{ __('Sin campañas asignadas') }}
-          </span>
+        <div class="flex flex-col justify-center rounded-lg border p-4">
+          <div class="flex min-h-[2rem] flex-wrap items-center -space-x-1.5">
+            <UserAvatar
+              v-for="r in responsablesInvolucrados"
+              :key="r"
+              :user="r"
+              size="lg"
+              class="ring-2 ring-white"
+            />
+            <span v-if="!responsablesInvolucrados.length" class="text-2xl font-semibold text-ink-gray-4">—</span>
+          </div>
+          <div class="mt-1 text-sm text-ink-gray-5">{{ __('Responsables involucrados') }}</div>
+        </div>
+        <div class="rounded-lg border p-4">
+          <div class="text-2xl font-semibold text-ink-gray-9">
+            {{ leadsActivos.data ?? 0 }}
+            <span class="text-lg font-normal text-ink-gray-4">/ {{ leadsTotal.data ?? 0 }}</span>
+          </div>
+          <div class="text-sm text-ink-gray-5">{{ __('Leads activos') }}</div>
+        </div>
+        <div class="rounded-lg border p-4">
+          <div class="text-2xl font-semibold text-ink-gray-9">{{ kpiActivas }}</div>
+          <div class="text-sm text-ink-gray-5">{{ __('Oportunidades activas') }}</div>
+        </div>
+        <div class="rounded-lg border p-4">
+          <div class="text-2xl font-semibold text-green-600">
+            {{ kpiGanadas }}
+            <span class="text-lg font-normal text-ink-gray-4">/ {{ kpiTotales }}</span>
+          </div>
+          <div class="text-sm text-ink-gray-5">{{ __('Ganadas / Total') }}</div>
         </div>
       </div>
 
-      <!-- Widget: Oportunidades -->
+      <!-- Productos involucrados (de las oportunidades de la organizacion) -->
+      <div class="shrink-0 rounded-lg border p-4">
+        <div class="mb-2 text-sm font-medium text-ink-gray-5">{{ __('Productos involucrados') }}</div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span
+            v-for="p in productosInvolucrados"
+            :key="p"
+            class="rounded border px-2 py-0.5 text-sm font-medium"
+            :style="prodPillStyle(p)"
+          >{{ p }}</span>
+          <span v-if="!productosInvolucrados.length" class="text-sm text-ink-gray-4">—</span>
+        </div>
+      </div>
+
+      <!-- Widget: Oportunidades (oculto a pedido) -->
       <div
+        v-if="false"
         :class="
           widgetShown('Deals')
             ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
@@ -332,8 +334,9 @@
         </div>
       </div>
 
-      <!-- Widget: Leads -->
+      <!-- Widget: Leads (oculto a pedido) -->
       <div
+        v-if="false"
         :class="
           widgetShown('Leads')
             ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
@@ -419,6 +422,102 @@
         </div>
       </div>
 
+      <!-- Fila: Software / Partner / Procesos (chips) -->
+      <div class="grid shrink-0 grid-cols-1 gap-4 lg:grid-cols-4">
+        <!-- Software -->
+        <div class="flex flex-col rounded-lg border lg:col-span-2">
+          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
+              <SoftwareIcon class="h-5" />
+              {{ __('Software') }}
+              <Badge variant="subtle" theme="gray" size="sm">{{ software.data?.length || 0 }}</Badge>
+            </div>
+            <Dropdown :options="softwareAddOptions">
+              <Button variant="ghost">
+                <template #icon><FeatherIcon name="plus" class="h-4" /></template>
+              </Button>
+            </Dropdown>
+          </div>
+          <div class="flex flex-wrap gap-2 p-3">
+            <span
+              v-for="sw in (software.data || [])"
+              :key="sw.name"
+              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
+            >
+              {{ sw.software_name }}
+              <button :title="__('Quitar')" @click="removeSoftwareChip(sw)">
+                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
+              </button>
+            </span>
+            <span v-if="!(software.data && software.data.length)" class="py-1 text-sm text-ink-gray-4">
+              {{ __('Sin software') }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Partner -->
+        <div class="flex flex-col rounded-lg border">
+          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
+              <FeatherIcon name="briefcase" class="h-5" />
+              {{ __('Partner') }}
+              <Badge variant="subtle" theme="gray" size="sm">{{ partnerList.length }}</Badge>
+            </div>
+            <Dropdown :options="partnerAddOptions">
+              <Button variant="ghost">
+                <template #icon><FeatherIcon name="plus" class="h-4" /></template>
+              </Button>
+            </Dropdown>
+          </div>
+          <div class="flex flex-wrap gap-2 p-3">
+            <span
+              v-for="p in partnerList"
+              :key="p.name"
+              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
+            >
+              {{ p.name }}
+              <button :title="__('Quitar')" @click="removePartner(p)">
+                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
+              </button>
+            </span>
+            <span v-if="!partnerList.length" class="py-1 text-sm text-ink-gray-4">
+              {{ __('Sin partners') }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Procesos / Tecnologías -->
+        <div class="flex flex-col rounded-lg border">
+          <div class="flex items-center justify-between gap-2 border-b px-4 py-3">
+            <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
+              <FeatherIcon name="cpu" class="h-5" />
+              {{ __('Procesos / Tecnologías') }}
+              <Badge variant="subtle" theme="gray" size="sm">{{ orgProcesos.data?.length || 0 }}</Badge>
+            </div>
+            <Dropdown :options="procesoAddOptions">
+              <Button variant="ghost">
+                <template #icon><FeatherIcon name="plus" class="h-4" /></template>
+              </Button>
+            </Dropdown>
+          </div>
+          <div class="flex flex-wrap gap-2 p-3">
+            <span
+              v-for="pr in (orgProcesos.data || [])"
+              :key="pr.name"
+              class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
+            >
+              {{ pr.proceso }}
+              <button :title="__('Quitar')" @click="removeProceso(pr)">
+                <FeatherIcon name="x" class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6" />
+              </button>
+            </span>
+            <span v-if="!(orgProcesos.data && orgProcesos.data.length)" class="py-1 text-sm text-ink-gray-4">
+              {{ __('Sin procesos') }}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <!-- Widget: Contacts -->
       <div
         :class="
@@ -439,6 +538,15 @@
               {{ contactRows.length }}
             </Badge>
           </div>
+          <Button
+            variant="subtle"
+            size="sm"
+            :label="__('Organigrama')"
+            :tooltip="__('Ver organigrama')"
+            @click="orgTab = 'organigrama'"
+          >
+            <template #prefix><FeatherIcon name="git-merge" class="h-3.5 w-3.5" /></template>
+          </Button>
           <div
             v-if="contactRolCounts.length > 1 && widgetShown('Contacts')"
             class="flex min-w-0 flex-1 flex-wrap items-center gap-2"
@@ -491,20 +599,6 @@
                 </Button>
               </template>
             </Link>
-            <Button
-              variant="ghost"
-              :tooltip="
-                maxWidget === 'Contacts' ? __('Restaurar') : __('Maximizar')
-              "
-              @click="toggleMax('Contacts')"
-            >
-              <template #icon>
-                <component
-                  :is="maxWidget === 'Contacts' ? MinimizeIcon : MaximizeIcon"
-                  class="h-4 w-4"
-                />
-              </template>
-            </Button>
           </div>
         </div>
         <div
@@ -522,82 +616,164 @@
         </div>
       </div>
 
-      <!-- Widget: Software -->
-      <div
-        :class="
-          widgetShown('Software')
-            ? 'flex min-h-0 flex-1 flex-col rounded-lg border'
-            : 'flex shrink-0 flex-col rounded-lg border'
-        "
-      >
+      <!-- Widget: Eventos (participación de contactos de la org) -->
+      <div class="flex flex-col rounded-lg border">
+        <div class="flex items-center gap-2 border-b px-4 py-3">
+          <div class="flex items-center gap-2 text-base font-semibold text-ink-gray-8">
+            <FeatherIcon name="calendar" class="h-5" />
+            {{ __('Eventos') }}
+            <Badge variant="subtle" theme="gray" size="sm">{{ orgEventos.length }}</Badge>
+          </div>
+        </div>
+        <div class="flex flex-col divide-y">
+          <div
+            v-for="e in orgEventos"
+            :key="e.name"
+            class="flex cursor-pointer items-center justify-between gap-3 px-4 py-2 hover:bg-surface-gray-1"
+            @click="openEvento(e.name)"
+          >
+            <div class="min-w-0">
+              <div class="truncate text-sm font-medium text-ink-gray-8">{{ e.titulo }}</div>
+              <div class="text-xs text-ink-gray-5">
+                <span v-if="e.tipo">{{ e.tipo }}</span><span v-if="e.fecha_inicio"> · {{ e.fecha_inicio }}</span>
+              </div>
+            </div>
+            <Badge v-if="e.estado" variant="subtle" theme="blue" size="sm">{{ e.estado }}</Badge>
+          </div>
+          <div v-if="!orgEventos.length" class="px-4 py-4 text-center text-sm text-ink-gray-4">
+            {{ __('Sin eventos con contactos de esta organización') }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Widget: Plataformas y Comunidades -->
+      <div class="shrink-0 rounded-lg border">
         <div
-          class="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3"
+          class="flex items-center gap-2 border-b px-4 py-3 text-base font-semibold text-ink-gray-8"
+        >
+          <FeatherIcon name="link-2" class="h-5" />
+          {{ __('Plataformas y Comunidades') }}
+        </div>
+        <div class="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4">
+          <a
+            v-for="l in plataformaLinks"
+            :key="l.key"
+            :href="l.url || undefined"
+            :target="l.url ? '_blank' : undefined"
+            rel="noopener noreferrer"
+            class="flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center"
+            :class="
+              l.url
+                ? 'cursor-pointer hover:border-outline-gray-3 hover:bg-surface-gray-1'
+                : 'cursor-default opacity-50'
+            "
+            @click="!l.url && $event.preventDefault()"
+          >
+            <FeatherIcon
+              :name="l.icon"
+              class="h-5 w-5"
+              :class="l.url ? 'text-ink-gray-7' : 'text-ink-gray-4'"
+            />
+            <span class="text-sm text-ink-gray-8">{{ l.label }}</span>
+            <span
+              class="text-xs"
+              :class="l.url ? 'text-blue-600' : 'text-ink-gray-4'"
+            >
+              {{ l.url ? __('Abrir') : __('sin configurar') }}
+            </span>
+          </a>
+        </div>
+      </div>
+
+      </template>
+
+      <template v-if="orgTab === 'organigrama'">
+        <div class="min-h-0 flex-1 overflow-y-auto">
+          <Organigrama
+            :organization-id="props.organizationId"
+            :organization-name="organization.doc?.organization_name || props.organizationId"
+          />
+        </div>
+      </template>
+
+      <template v-if="orgTab === 'datos'">
+      <!-- Widget: Ecosistema Productivo -->
+      <EcosistemaOrg :organization-id="props.organizationId" />
+
+      <!-- Widget: Campañas BDR -->
+      <div class="shrink-0 rounded-lg border">
+        <div
+          class="flex items-center justify-between gap-2 border-b px-4 py-3"
         >
           <div
             class="flex items-center gap-2 text-base font-semibold text-ink-gray-8"
           >
-            <SoftwareIcon class="h-5" />
-            {{ __('Software') }}
+            <FeatherIcon name="target" class="h-5" />
+            {{ __('Campañas BDR') }}
             <Badge variant="subtle" theme="gray" size="sm">
-              {{ softwareRows.length }}
+              {{ bdrCampaigns.length }}
             </Badge>
           </div>
-          <div class="flex gap-2">
-            <Dropdown :options="[...softwareLinkOptions, ...softwareCreateOptions]">
-              <Button variant="outline">
+          <Popover>
+            <template #target="{ togglePopover }">
+              <Button variant="outline" @click="togglePopover()">
                 <template #prefix>
-                  <FeatherIcon name="link" class="h-4" />
+                  <FeatherIcon name="plus" class="h-4" />
                 </template>
-                {{ __('Add') }}
-                <template #suffix>
-                  <FeatherIcon name="chevron-down" class="h-4" />
-                </template>
+                {{ __('Asignar Campañas BDR') }}
               </Button>
-            </Dropdown>
-            <Button
-              variant="ghost"
-              :tooltip="
-                maxWidget === 'Software' ? __('Restaurar') : __('Maximizar')
-              "
-              @click="toggleMax('Software')"
-            >
-              <template #icon>
-                <component
-                  :is="maxWidget === 'Software' ? MinimizeIcon : MaximizeIcon"
-                  class="h-4 w-4"
-                />
-              </template>
-            </Button>
-          </div>
-        </div>
-        <div
-          v-show="widgetShown('Software')"
-          class="min-h-0 flex-1 overflow-y-auto"
-        >
-          <ListView
-            v-if="softwareRows.length"
-            class="px-4 py-2"
-            :rows="softwareRows"
-            :columns="softwareColumns"
-            row-key="name"
-            :options="{ selectable: false, showTooltip: false }"
-          >
-            <template #cell="{ item, row, column }">
-              <Button
-                v-if="column.key === '_unlink'"
-                variant="ghost"
-                class="!h-6 !w-6"
-                :tooltip="__('Desvincular')"
-                @click.stop.prevent="unlinkSoftware(row)"
-              >
-                <FeatherIcon name="x" class="h-4 w-4 text-ink-gray-6" />
-              </Button>
-              <div v-else class="truncate text-base">
-                {{ item?.timeAgo || item?.label || item }}
+            </template>
+            <template #body>
+              <div class="mt-1 w-64 rounded-lg border border-outline-gray-2 bg-surface-elevation-2 p-1 shadow-2xl">
+                <div class="max-h-64 overflow-y-auto">
+                  <label
+                    v-for="o in allBdrOptions"
+                    :key="o"
+                    class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-surface-gray-1"
+                  >
+                    <input
+                      type="checkbox"
+                      class="rounded"
+                      :checked="bdrCampaigns.includes(o)"
+                      @change="toggleBdr(o)"
+                    />
+                    <span class="text-ink-gray-8">{{ o }}</span>
+                  </label>
+                </div>
+                <button
+                  class="mt-1 flex w-full items-center gap-1.5 border-t px-2 py-1.5 text-sm text-ink-blue-link hover:bg-surface-gray-1"
+                  @click="promptNewBdr"
+                >
+                  <FeatherIcon name="plus" class="h-3.5 w-3.5" />
+                  {{ __('Nueva campaña...') }}
+                </button>
               </div>
             </template>
-          </ListView>
-          <EmptyState v-else :icon="SoftwareIcon" :name="__('Software')" />
+          </Popover>
+        </div>
+        <div class="flex flex-wrap gap-2 p-3">
+          <span
+            v-for="c in bdrCampaigns"
+            :key="c"
+            class="flex items-center gap-1.5 rounded-full bg-surface-gray-2 px-2.5 py-1 text-sm text-ink-gray-8"
+          >
+            {{ c }}
+            <button
+              :title="__('Quitar')"
+              @click="removeBdr(c)"
+            >
+              <FeatherIcon
+                name="x"
+                class="h-3.5 w-3.5 text-ink-gray-5 hover:text-ink-red-6"
+              />
+            </button>
+          </span>
+          <span
+            v-if="!bdrCampaigns.length"
+            class="py-1 text-sm text-ink-gray-4"
+          >
+            {{ __('Sin campañas asignadas') }}
+          </span>
         </div>
       </div>
 
@@ -748,6 +924,19 @@
         </div>
       </div>
       </div>
+      </template>
+
+      <template v-if="orgTab === 'cvr'">
+        <div class="flex min-h-0 flex-1 overflow-hidden">
+          <CvrOrg :organization-id="props.organizationId" />
+        </div>
+      </template>
+
+      <template v-if="orgTab === 'roadmap'">
+        <div class="flex min-h-0 flex-1 overflow-hidden">
+          <RoadmapOrg :organization-id="props.organizationId" />
+        </div>
+      </template>
     </div>
   </div>
   <ErrorPage
@@ -789,12 +978,42 @@
       />
     </template>
   </Dialog>
+  <Dialog
+    v-model="showAddPartnerDialog"
+    :options="{ title: __('Agregar Partner existente') }"
+  >
+    <template #body-content>
+      <Link
+        class="form-control"
+        value=""
+        doctype="CRM Partner"
+        @change="(name) => { addPartner(name); showAddPartnerDialog = false }"
+      />
+    </template>
+  </Dialog>
+  <Dialog
+    v-model="showAddProcesoDialog"
+    :options="{ title: __('Agregar Proceso / Tecnología existente') }"
+  >
+    <template #body-content>
+      <Link
+        class="form-control"
+        value=""
+        doctype="CRM Proceso Tecnologia"
+        @change="(name) => { addProceso(name); showAddProcesoDialog = false }"
+      />
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
 import ErrorPage from '@/components/ErrorPage.vue'
 import Resizer from '@/components/Resizer.vue'
 import SidePanelLayout from '@/components/SidePanelLayout.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
+import EcosistemaOrg from '@/components/EcosistemaOrg.vue'
+import CvrOrg from '@/components/CvrOrg.vue'
+import RoadmapOrg from '@/components/RoadmapOrg.vue'
 import Icon from '@/components/Icon.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import DealsListView from '@/components/ListViews/DealsListView.vue'
@@ -813,6 +1032,7 @@ import DeleteLinkedDocModal from '@/components/DeleteLinkedDocModal.vue'
 import DealModal from '@/components/Modals/DealModal.vue'
 import ContactModal from '@/components/Modals/ContactModal.vue'
 import Link from '@/components/Controls/Link.vue'
+import Organigrama from '@/components/Organigrama.vue'
 import CustomActions from '@/components/CustomActions.vue'
 import { useDocument } from '@/data/document'
 import { getSettings } from '@/stores/settings'
@@ -832,6 +1052,7 @@ import {
   Avatar,
   FileUploader,
   Dropdown,
+  Popover,
   Dialog,
   Tabs,
   ListView,
@@ -860,6 +1081,9 @@ const { capture } = useTelemetry()
 
 const route = useRoute()
 const router = useRouter()
+function goBack() {
+  router.back()
+}
 
 const errorTitle = ref('')
 const errorMessage = ref('')
@@ -867,6 +1091,15 @@ const errorMessage = ref('')
 const showDeleteLinkedDocModal = ref(false)
 
 // Maximizar widget (deja solo los encabezados de los demas)
+const orgTab = ref('general')
+const orgTabs = [
+  { name: 'general', label: 'General' },
+  { name: 'organigrama', label: 'Organigrama' },
+  { name: 'datos', label: 'Datos y Mapa' },
+  { name: 'cvr', label: 'CVR' },
+  { name: 'roadmap', label: 'Roadmap' },
+]
+
 const maxWidget = ref(null)
 function toggleMax(key) {
   maxWidget.value = maxWidget.value === key ? null : key
@@ -976,12 +1209,19 @@ const bdrCampaigns = computed(() => {
     return []
   }
 })
-const bdrAddOptions = computed(() =>
-  BDR_OPTIONS.filter((o) => !bdrCampaigns.value.includes(o)).map((o) => ({
+const bdrAddOptions = computed(() => [
+  ...BDR_OPTIONS.filter((o) => !bdrCampaigns.value.includes(o)).map((o) => ({
     label: o,
     onClick: () => addBdr(o),
   })),
-)
+  {
+    label: '➕ ' + __('Nueva campaña...'),
+    onClick: () => {
+      const c = window.prompt(__('Nombre de la campaña BDR'))
+      if (c && c.trim()) addBdr(c.trim())
+    },
+  },
+])
 function saveBdr(list) {
   organization.setValue
     .submit({ custom_campanas_bdr_list: JSON.stringify(list) })
@@ -993,6 +1233,43 @@ function addBdr(c) {
 }
 function removeBdr(c) {
   saveBdr(bdrCampaigns.value.filter((x) => x !== c))
+}
+const allCampaignsRaw = ref([])
+async function loadAllCampaigns() {
+  try {
+    const rows = await call('frappe.client.get_list', {
+      doctype: 'CRM Organization',
+      filters: { custom_campanas_bdr_list: ['is', 'set'] },
+      fields: ['custom_campanas_bdr_list'],
+      limit_page_length: 0,
+    })
+    const set = new Set()
+    for (const r of rows) {
+      try {
+        const list = JSON.parse(r.custom_campanas_bdr_list || '[]')
+        if (Array.isArray(list)) for (const c of list) if (c) set.add(c)
+      } catch (e) {
+        // ignore
+      }
+    }
+    allCampaignsRaw.value = [...set]
+  } catch (e) {
+    allCampaignsRaw.value = []
+  }
+}
+loadAllCampaigns()
+const allBdrOptions = computed(() => {
+  const set = new Set(BDR_OPTIONS)
+  for (const c of allCampaignsRaw.value) set.add(c)
+  return [...set].sort((a, b) => a.localeCompare(b))
+})
+function toggleBdr(c) {
+  if (bdrCampaigns.value.includes(c)) removeBdr(c)
+  else addBdr(c)
+}
+function promptNewBdr() {
+  const c = window.prompt(__('Nombre de la campaña BDR'))
+  if (c && c.trim()) addBdr(c.trim())
 }
 
 // Plataformas y Comunidades (links)
@@ -1057,6 +1334,7 @@ const breadcrumbs = computed(() => {
     route: {
       name: 'Organization',
       params: { organizationId: props.organizationId },
+      query: route.query,
     },
   })
   return items
@@ -1170,6 +1448,8 @@ const leads = createListResource({
     'first_name',
     'last_name',
     'organization',
+    'currency',
+    'deal_value',
     'status',
     'email',
     'mobile_no',
@@ -1181,6 +1461,23 @@ const leads = createListResource({
   },
   orderBy: 'modified desc',
   pageLength: 20,
+  auto: true,
+})
+
+const leadsActivos = createResource({
+  url: 'frappe.client.get_count',
+  params: {
+    doctype: 'CRM Lead',
+    filters: { organization: props.organizationId, converted: 0 },
+  },
+  auto: true,
+})
+const leadsTotal = createResource({
+  url: 'frappe.client.get_count',
+  params: {
+    doctype: 'CRM Lead',
+    filters: { organization: props.organizationId },
+  },
   auto: true,
 })
 
@@ -1201,6 +1498,7 @@ const contacts = createListResource({
     'designation',
     'custom_engagement',
     'custom_relacion',
+    'custom_prod_cand_texto',
     'modified',
   ],
   filters: {
@@ -1303,12 +1601,204 @@ const contactRows = computed(() => {
     data = data.filter((c) => (c.custom_rol || '—') === contactRolFilter.value)
   return data.map(getContactRowObject)
 })
+const orgPartners = ref({ data: [] })
+const partnerList = computed(() => {
+  const seen = new Set()
+  const out = []
+  for (const p of orgPartners.value.data || []) {
+    if (p.name && !seen.has(p.name)) {
+      seen.add(p.name)
+      out.push(p)
+    }
+  }
+  return out
+})
+
+// Eventos de Marketing donde participaron contactos de esta organización
+const orgEventos = ref([])
+async function loadOrgEventos() {
+  try {
+    const cs = await call('frappe.client.get_list', {
+      doctype: 'Contact',
+      filters: { company_name: props.organizationId },
+      fields: ['name'],
+      limit_page_length: 0,
+    })
+    const names = cs.map((c) => c.name)
+    if (!names.length) {
+      orgEventos.value = []
+      return
+    }
+    orgEventos.value = await call('frappe.client.get_list', {
+      doctype: 'CRM Marketing Evento',
+      filters: [['CRM Evento Participante', 'contact', 'in', names]],
+      fields: ['name', 'titulo', 'tipo', 'estado', 'fecha_inicio'],
+      order_by: 'fecha_inicio desc',
+      limit_page_length: 0,
+    })
+  } catch (e) {
+    orgEventos.value = []
+  }
+}
+loadOrgEventos()
+watch(() => props.organizationId, loadOrgEventos)
+function openEvento(name) {
+  router.push({ name: 'EventoDetalle', params: { eventoId: name } })
+}
+const orgProcesos = ref({ data: [] })
+async function loadOrgRelated() {
+  try {
+    const r = await call('org_related', { organization: props.organizationId })
+    orgPartners.value = { data: (r.partners || []).map((n) => ({ name: n })) }
+    orgProcesos.value = { data: (r.procesos || []).map((p) => ({ proceso: p })) }
+  } catch (e) { /* ignore */ }
+}
+watch(() => props.organizationId, loadOrgRelated, { immediate: true })
+
+async function removeSoftwareChip(sw) {
+  try {
+    const doc = await call('frappe.client.get', { doctype: 'Software', name: sw.name })
+    doc.organizations = (doc.organizations || []).filter(
+      (r) => r.organization !== props.organizationId,
+    )
+    await call('frappe.client.save', { doc })
+    toast.success(__('Desvinculado'))
+    software.reload()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al desvincular'))
+  }
+}
+
+async function addPartner(name) {
+  if (!name) return
+  if (partnerList.value.some((r) => r.name === name)) {
+    toast.error(__('Ya vinculado'))
+    return
+  }
+  try {
+    const p = await call('frappe.client.get', { doctype: 'CRM Partner', name })
+    p.organizations = p.organizations || []
+    p.organizations.push({ organization: props.organizationId })
+    await call('frappe.client.save', { doc: p })
+    toast.success(__('Partner vinculado'))
+    loadOrgRelated()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al vincular'))
+  }
+}
+
+async function removePartner(row) {
+  try {
+    const p = await call('frappe.client.get', { doctype: 'CRM Partner', name: row.name })
+    p.organizations = (p.organizations || []).filter(
+      (r) => r.organization !== props.organizationId,
+    )
+    await call('frappe.client.save', { doc: p })
+    toast.success(__('Desvinculado'))
+    loadOrgRelated()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al desvincular'))
+  }
+}
+
+async function addProceso(name) {
+  if (!name) return
+  if ((orgProcesos.value.data || []).some((r) => r.proceso === name)) {
+    toast.error(__('Ya agregado'))
+    return
+  }
+  try {
+    const org = await call('frappe.client.get', {
+      doctype: 'CRM Organization',
+      name: props.organizationId,
+    })
+    org.custom_procesos_tecnologias = org.custom_procesos_tecnologias || []
+    org.custom_procesos_tecnologias.push({ proceso: name })
+    await call('frappe.client.save', { doc: org })
+    toast.success(__('Agregado'))
+    loadOrgRelated()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al agregar'))
+  }
+}
+
+async function removeProceso(row) {
+  try {
+    const o = await call('frappe.client.get', {
+      doctype: 'CRM Organization',
+      name: props.organizationId,
+    })
+    o.custom_procesos_tecnologias = (o.custom_procesos_tecnologias || []).filter(
+      (r) => r.proceso !== row.proceso,
+    )
+    await call('frappe.client.save', { doc: o })
+    toast.success(__('Quitado'))
+    loadOrgRelated()
+  } catch (e) {
+    toast.error(e.messages?.[0] || __('Error al quitar'))
+  }
+}
+
 const softwareRows = computed(() => [
   ...(software.data?.map(getSoftwareRowObject) || []),
   ...(procesos.data?.map(getProcesoRowObject) || []),
 ])
 
 const { getFormattedCurrency } = getMeta('CRM Deal')
+
+const isDealOpen = (d) => {
+  const t = getDealStatus(d.status)?.type
+  return t !== 'Won' && t !== 'Lost'
+}
+const kpiTotales = computed(() => (deals.data || []).length)
+const kpiActivas = computed(() => (deals.data || []).filter(isDealOpen).length)
+const conActividad = computed(() => kpiActivas.value > 0 || (leadsActivos.data ?? 0) > 0)
+const responsablesInvolucrados = computed(() => {
+  const set = new Set()
+  for (const d of deals.data || []) if (d.deal_owner) set.add(d.deal_owner)
+  for (const l of leads.data || []) if (l.lead_owner) set.add(l.lead_owner)
+  return [...set]
+})
+const productosInvolucrados = computed(() => {
+  const set = new Set()
+  for (const d of deals.data || []) if (d.custom_producto) set.add(d.custom_producto)
+  return [...set]
+})
+const PROD_PILL_COLORS = [
+  { bg: '#dbeafe', fg: '#1e40af', bd: '#bfdbfe' },
+  { bg: '#dcfce7', fg: '#166534', bd: '#bbf7d0' },
+  { bg: '#f3e8ff', fg: '#6b21a8', bd: '#e9d5ff' },
+  { bg: '#fef3c7', fg: '#92400e', bd: '#fde68a' },
+  { bg: '#fce7f3', fg: '#9d174d', bd: '#fbcfe8' },
+  { bg: '#ccfbf1', fg: '#115e59', bd: '#99f6e4' },
+  { bg: '#ffedd5', fg: '#9a3412', bd: '#fdba74' },
+  { bg: '#e0e7ff', fg: '#3730a3', bd: '#c7d2fe' },
+]
+function prodPillStyle(value) {
+  const str = String(value || '')
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
+  const c = PROD_PILL_COLORS[h % PROD_PILL_COLORS.length]
+  return { backgroundColor: c.bg, color: c.fg, borderColor: c.bd }
+}
+const kpiGanadas = computed(
+  () => (deals.data || []).filter((d) => getDealStatus(d.status)?.type === 'Won').length,
+)
+const kpiPerdidas = computed(
+  () => (deals.data || []).filter((d) => getDealStatus(d.status)?.type === 'Lost').length,
+)
+const kpiPipeline = computed(() =>
+  (deals.data || [])
+    .filter(isDealOpen)
+    .reduce((a, d) => a + (d.deal_value || d.annual_revenue || 0), 0),
+)
+const kpiPipelineFmt = computed(() => {
+  try {
+    return getFormattedCurrency('deal_value', { deal_value: kpiPipeline.value })
+  } catch (e) {
+    return kpiPipeline.value
+  }
+})
 
 function getSoftwareRowObject(sw) {
   return {
@@ -1387,7 +1877,7 @@ function getDealRowObject(deal) {
       label: deal.organization,
       logo: organization.doc?.organization_logo,
     },
-    annual_revenue: getFormattedCurrency('annual_revenue', deal),
+    deal_value: getFormattedCurrency('deal_value', deal),
     status: {
       label: deal.status,
       color: getDealStatus(deal.status)?.color,
@@ -1460,6 +1950,11 @@ const leadColumns = [
     label: __('Responsable'),
     key: 'lead_owner',
     width: '11rem',
+  },
+  {
+    label: __('Producto candidato'),
+    key: 'custom_prod_cand_texto',
+    width: '12rem',
   },
 ]
 
@@ -1571,6 +2066,41 @@ const contactColumns = [
 
 const { showModal } = useDoctypeModal()
 
+const showAddPartnerDialog = ref(false)
+const showAddProcesoDialog = ref(false)
+const partnerAddOptions = [
+  {
+    label: __('Crear nuevo'),
+    icon: 'plus',
+    onClick: () =>
+      showModal({
+        doctype: 'CRM Partner',
+        callbacks: { afterInsert: (d) => addPartner(d.name) },
+      }),
+  },
+  {
+    label: __('Agregar existente'),
+    icon: 'link',
+    onClick: () => (showAddPartnerDialog.value = true),
+  },
+]
+const procesoAddOptions = [
+  {
+    label: __('Crear nuevo'),
+    icon: 'plus',
+    onClick: () =>
+      showModal({
+        doctype: 'CRM Proceso Tecnologia',
+        callbacks: { afterInsert: (d) => addProceso(d.name) },
+      }),
+  },
+  {
+    label: __('Agregar existente'),
+    icon: 'link',
+    onClick: () => (showAddProcesoDialog.value = true),
+  },
+]
+
 const showDealModal = ref(false)
 const showContactModal = ref(false)
 
@@ -1632,6 +2162,36 @@ const softwareLinkOptions = [
   {
     label: __('Proceso / Tecnología'),
     onClick: () => openLinkSoftwareDialog('Procesos - Tecnologias'),
+  },
+]
+
+const softwareAddOptions = [
+  {
+    label: __('Crear nuevo'),
+    icon: 'plus',
+    onClick: () =>
+      showModal({
+        doctype: 'Software',
+        callbacks: {
+          afterInsert: async (d) => {
+            await call('frappe.client.insert', {
+              doc: {
+                doctype: 'Software Organization',
+                parenttype: 'Software',
+                parent: d.name,
+                parentfield: 'organizations',
+                organization: props.organizationId,
+              },
+            })
+            software.reload()
+          },
+        },
+      }),
+  },
+  {
+    label: __('Agregar existente'),
+    icon: 'link',
+    onClick: () => openLinkSoftwareDialog('Software'),
   },
 ]
 

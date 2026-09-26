@@ -109,6 +109,78 @@ const routes = [
     props: true,
   },
   {
+    path: '/partners/view/:viewType?',
+    name: 'Partners',
+    component: () => import('@/pages/Partners.vue'),
+  },
+  {
+    path: '/partners/:partnerId',
+    name: 'PartnerDetail',
+    component: () => import('@/pages/PartnerDetail.vue'),
+    props: true,
+  },
+  {
+    path: '/procesos-tecnologias/view/:viewType?',
+    name: 'ProcesosTecnologias',
+    component: () => import('@/pages/ProcesosTecnologias.vue'),
+  },
+  {
+    path: '/pipeline',
+    name: 'Pipeline',
+    component: () => import('@/pages/Pipeline.vue'),
+  },
+  {
+    path: '/ventas',
+    name: 'Ventas',
+    component: () => import('@/pages/Ventas.vue'),
+  },
+  {
+    path: '/ventas/:dealId',
+    name: 'VentaRelacion',
+    component: () => import('@/pages/VentaRelacion.vue'),
+    props: true,
+  },
+  {
+    path: '/ventas/lista/entregas',
+    name: 'VentasEntregas',
+    component: () => import('@/pages/VentasLista.vue'),
+    props: { tipo: 'entregas' },
+  },
+  {
+    path: '/ventas/lista/facturas',
+    name: 'VentasFacturas',
+    component: () => import('@/pages/VentasLista.vue'),
+    props: { tipo: 'facturas' },
+  },
+  {
+    path: '/ventas/lista/cobros',
+    name: 'VentasCobros',
+    component: () => import('@/pages/VentasLista.vue'),
+    props: { tipo: 'cobros' },
+  },
+  {
+    path: '/ventas/lista/pagos-prov',
+    name: 'VentasPagosProv',
+    component: () => import('@/pages/VentasLista.vue'),
+    props: { tipo: 'pagos-prov' },
+  },
+  {
+    path: '/ventas/lista/impuestos',
+    name: 'VentasImpuestos',
+    component: () => import('@/pages/VentasLista.vue'),
+    props: { tipo: 'impuestos' },
+  },
+  {
+    path: '/ventas/comisiones',
+    name: 'Comisiones',
+    component: () => import('@/pages/ComisionesLista.vue'),
+  },
+  {
+    path: '/ventas/finanzas',
+    name: 'FinanzasPorMes',
+    component: () => import('@/pages/FinanzasPorMes.vue'),
+  },
+  {
     path: '/attachments',
     name: 'Attachments',
     component: () => import('@/pages/Attachments.vue'),
@@ -119,9 +191,81 @@ const routes = [
     component: () => import('@/pages/OfertaComercial.vue'),
   },
   {
+    path: '/casos-referencia',
+    name: 'CasosReferencia',
+    component: () => import('@/pages/CasosReferencia.vue'),
+  },
+  {
+    path: '/campanas-bdr',
+    name: 'CampanasBDR',
+    component: () => import('@/pages/CampanasBDR.vue'),
+  },
+  {
+    path: '/ecosistema',
+    name: 'Ecosistema',
+    component: () => import('@/pages/EcosistemaView.vue'),
+  },
+  {
+    path: '/planificacion-viajes',
+    name: 'PlanificacionViajes',
+    component: () => import('@/pages/PlanificacionViajes.vue'),
+  },
+  {
+    path: '/planificacion-viajes/:planId',
+    name: 'PlanViajeDetalle',
+    component: () => import('@/pages/PlanViajeDetalle.vue'),
+    props: true,
+  },
+  {
+    path: '/planificacion-ventas',
+    name: 'PlanificacionVentas',
+    component: () => import('@/pages/PlanificacionVentas.vue'),
+  },
+  {
+    path: '/roadmaps',
+    name: 'Roadmaps',
+    component: () => import('@/pages/RoadmapsView.vue'),
+  },
+  {
+    path: '/sugerencias',
+    name: 'SugerenciasAdmin',
+    component: () => import('@/pages/SugerenciasView.vue'),
+  },
+  {
+    path: '/seguimiento',
+    name: 'Seguimiento',
+    component: () => import('@/pages/SeguimientoView.vue'),
+  },
+  {
+    path: '/ventas-por-cliente',
+    name: 'VentasPorCliente',
+    component: () => import('@/pages/VentasPorCliente.vue'),
+  },
+  {
+    path: '/marketing/eventos',
+    name: 'MarketingEventos',
+    component: () => import('@/pages/MarketingEventos.vue'),
+  },
+  {
+    path: '/marketing/eventos/:eventoId',
+    name: 'EventoDetalle',
+    component: () => import('@/pages/EventoDetalle.vue'),
+    props: true,
+  },
+  {
     path: '/ventas-por-mes',
     name: 'VentasPorMes',
     component: () => import('@/pages/VentasPorMes.vue'),
+  },
+  {
+    path: '/calendario-cierres',
+    name: 'CalendarioCierres',
+    component: () => import('@/pages/CalendarioCierres.vue'),
+  },
+  {
+    path: '/dashboard-abc',
+    name: 'DashboardABC',
+    component: () => import('@/pages/DashboardABC.vue'),
   },
   {
     path: '/alertas',
@@ -234,27 +378,8 @@ router.beforeEach(async (to, from, next) => {
   if (isLoggedIn && to.name !== 'Not Permitted' && !isCrmUser()) {
     next({ name: 'Not Permitted' })
   } else if (to.name === 'Home' && isLoggedIn) {
-    const { views, getDefaultView } = viewsStore()
-    await views.promise
-
-    let defaultView = getDefaultView()
-    if (!defaultView) {
-      next({ name: 'Leads' })
-      return
-    }
-
-    let { route_name, type, name, is_standard } = defaultView
-    route_name = route_name || 'Leads'
-
-    if (name && !is_standard) {
-      next({
-        name: route_name,
-        params: { viewType: type },
-        query: { view: name },
-      })
-    } else {
-      next({ name: route_name, params: { viewType: type } })
-    }
+    // Página por defecto al abrir la app: Seguimiento
+    next({ name: 'Seguimiento' })
   } else if (!isLoggedIn) {
     window.location.href = '/login?redirect-to=/crm'
   } else if (to.matched.length === 0) {

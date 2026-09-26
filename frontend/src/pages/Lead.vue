@@ -1,6 +1,13 @@
 <template>
   <LayoutHeader>
     <template #left-header>
+      <Button
+        variant="ghost"
+        icon="lucide-arrow-left"
+        :tooltip="__('Volver')"
+        class="mr-1"
+        @click="goBack"
+      />
       <Breadcrumbs :items="breadcrumbs">
         <template #prefix="{ item }">
           <Icon v-if="item.icon" :icon="item.icon" class="mr-2 h-4" />
@@ -8,6 +15,22 @@
       </Breadcrumbs>
     </template>
     <template v-if="!errorTitle" #right-header>
+      <div v-if="prevId || nextId" class="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          icon="lucide-chevron-left"
+          :disabled="!prevId"
+          :tooltip="__('Anterior')"
+          @click="goToSibling(prevId)"
+        />
+        <Button
+          variant="ghost"
+          icon="lucide-chevron-right"
+          :disabled="!nextId"
+          :tooltip="__('Siguiente')"
+          @click="goToSibling(nextId)"
+        />
+      </div>
       <CustomActions
         v-if="document._actions?.length"
         :actions="document._actions"
@@ -54,9 +77,10 @@
     </template>
   </LayoutHeader>
   <div v-if="doc.name" class="flex h-full overflow-hidden">
+    <div class="relative flex flex-1 flex-col overflow-hidden">
     <Tabs
-      v-model="tabIndex"
-      :tabs="tabs"
+      v-model="visibleIndex"
+      :tabs="visibleTabs"
       class="flex flex-1 overflow-hidden flex-col [&_[role='tab']]:px-0 [&_[role='tab']]:shrink-0 [&_[role='tablist']]:px-5 [&_[role='tablist']::-webkit-scrollbar]:h-0 [&_[role='tablist']]:min-h-[45px] [&_[role='tablist']]:gap-7.5 [&_[role='tabpanel']:not([hidden])]:flex [&_[role='tabpanel']:not([hidden])]:grow"
     >
       <template #tab-panel="{ tab }">
@@ -80,6 +104,19 @@
         />
       </template>
     </Tabs>
+      <div v-if="moreTabs.length" class="absolute right-4 top-1.5 z-10">
+        <Dropdown :options="moreTabs" placement="bottom-end">
+          <template #default="{ open }">
+            <Button
+              variant="ghost"
+              :label="activeSecondaryLabel || __('Más')"
+              :iconRight="open ? 'chevron-up' : 'chevron-down'"
+              :class="activeSecondaryLabel ? 'text-ink-gray-9' : 'text-ink-gray-6'"
+            />
+          </template>
+        </Dropdown>
+      </div>
+    </div>
     <Resizer class="flex flex-col justify-between border-l" side="right">
       <div
         class="flex h-[45px] cursor-copy items-center border-b px-5 py-2.5 text-lg-medium text-ink-gray-9"
@@ -154,6 +191,13 @@
                             __('Please set a mobile number to make calls'),
                           )
                   "
+                />
+
+                <Button
+                  v-if="doc.mobile_no || doc.phone"
+                  :tooltip="__('Escribir por WhatsApp')"
+                  :icon="WhatsAppIcon"
+                  @click="openWhatsApp(doc.mobile_no || doc.phone)"
                 />
 
                 <Button
@@ -265,6 +309,7 @@ import PeopleIcon from '@/components/Icons/PeopleIcon.vue'
 import DetailsIcon from '@/components/Icons/DetailsIcon.vue'
 import EventIcon from '@/components/Icons/EventIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
+import { openWhatsApp } from '@/utils'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
@@ -295,6 +340,7 @@ import { getView } from '@/utils/view'
 import { getSettings } from '@/stores/settings'
 import { globalStore } from '@/stores/global'
 import { statusesStore } from '@/stores/statuses'
+import { listNavStore } from '@/stores/listNav'
 import { getMeta } from '@/stores/meta'
 import { useDocument } from '@/data/document'
 import { whatsappEnabled } from '@/composables/whatsapp'
@@ -311,9 +357,10 @@ import {
   usePageMeta,
   toast,
 } from 'frappe-ui'
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useActiveTabManager } from '@/composables/useActiveTabManager'
+import { useUnsavedChangesWarning } from '@/composables/useUnsavedChangesWarning'
 
 const { brand } = getSettings()
 const { $dialog, $socket, makeCall } = globalStore()
@@ -322,6 +369,16 @@ const { doctypeMeta } = getMeta('CRM Lead')
 
 const route = useRoute()
 const router = useRouter()
+function goBack() {
+  router.back()
+}
+
+const _listNav = listNavStore()
+const prevId = computed(() => _listNav.prevOf('CRM Lead', props.leadId))
+const nextId = computed(() => _listNav.nextOf('CRM Lead', props.leadId))
+function goToSibling(id) {
+  if (id) router.push({ name: 'Lead', params: { leadId: id } })
+}
 
 function openOrganization() {
   if (doc.value?.organization)
@@ -358,9 +415,10 @@ const canDelete = computed(() => permissions.data?.permissions?.delete || false)
 const doc = computed(() => document.doc || {})
 
 const leadMapQuery = computed(() => {
-  const d = doc.value || {}
+  const d = document.doc || {}
   return [d.organization || d.lead_name, d.territory].filter(Boolean).join(', ')
 })
+useUnsavedChangesWarning(() => document.isDirty)
 
 onMounted(async () => {
   if (document.doc) await triggerOnRender()
@@ -422,7 +480,11 @@ const breadcrumbs = computed(() => {
 
   items.push({
     label: title.value,
-    route: { name: 'Lead', params: { leadId: props.leadId } },
+    route: {
+      name: 'Lead',
+      params: { leadId: props.leadId },
+      query: route.query,
+    },
   })
   return items
 })
@@ -446,19 +508,15 @@ usePageMeta(() => {
 const tabs = computed(() => {
   let tabOptions = [
     {
-      name: 'Activity',
-      label: __('Activity'),
-      icon: ActivityIcon,
-    },
-    {
-      name: 'Emails',
-      label: __('Emails'),
-      icon: EmailIcon,
+      name: 'Data',
+      label: __('Data'),
+      icon: DetailsIcon,
     },
     {
       name: 'Comments',
       label: __('Comments'),
       icon: CommentIcon,
+      secondary: true,
     },
     {
       name: 'Interactions',
@@ -466,51 +524,89 @@ const tabs = computed(() => {
       icon: PeopleIcon,
     },
     {
-      name: 'FactsMap',
-      label: __('Datos'),
-      icon: LucideMapPin,
-    },
-    {
-      name: 'Data',
-      label: __('Data'),
-      icon: DetailsIcon,
-    },
-    {
-      name: 'Events',
-      label: __('Events'),
-      icon: EventIcon,
-    },
-    {
-      name: 'Calls',
-      label: __('Calls'),
-      icon: PhoneIcon,
-    },
-    {
-      name: 'Tasks',
-      label: __('Tasks'),
-      icon: TaskIcon,
-    },
-    {
-      name: 'Notes',
-      label: __('Notes'),
-      icon: NoteIcon,
-    },
-    {
-      name: 'Attachments',
-      label: __('Attachments'),
-      icon: AttachmentIcon,
-    },
-    {
       name: 'WhatsApp',
       label: __('WhatsApp'),
       icon: WhatsAppIcon,
       condition: () => whatsappEnabled.value,
     },
+    {
+      name: 'Activity',
+      label: __('Activity'),
+      icon: ActivityIcon,
+      secondary: true,
+    },
+    {
+      name: 'Emails',
+      label: __('Emails'),
+      icon: EmailIcon,
+      secondary: true,
+    },
+    {
+      name: 'Events',
+      label: __('Events'),
+      icon: EventIcon,
+      secondary: true,
+    },
+    {
+      name: 'Calls',
+      label: __('Calls'),
+      icon: PhoneIcon,
+      secondary: true,
+    },
+    {
+      name: 'Tasks',
+      label: __('Tasks'),
+      icon: TaskIcon,
+      secondary: true,
+    },
+    {
+      name: 'Notes',
+      label: __('Notes'),
+      icon: NoteIcon,
+      condition: () => false,
+    },
+    {
+      name: 'Attachments',
+      label: __('Attachments'),
+      icon: AttachmentIcon,
+      secondary: true,
+    },
   ]
   return tabOptions.filter((tab) => (tab.condition ? tab.condition() : true))
 })
 
-const { tabIndex, changeTabTo } = useActiveTabManager(tabs, 'lastLeadTab')
+const tabIndex = ref(0)
+function changeTabTo(tabName) {
+  const i = tabs.value.findIndex((t) => t.name.toLowerCase() === tabName)
+  if (i >= 0) tabIndex.value = i
+}
+const moreTabs = computed(() =>
+  tabs.value
+    .map((t, i) => ({ ...t, index: i }))
+    .filter((t) => t.secondary)
+    .map((t) => ({
+      label: t.label,
+      icon: h(t.icon, { class: 'h-4 w-4' }),
+      onClick: () => (tabIndex.value = t.index),
+    })),
+)
+const activeSecondaryLabel = computed(() => {
+  const t = tabs.value[tabIndex.value]
+  return t && t.secondary ? t.label : ''
+})
+const visibleTabs = computed(() => tabs.value.filter((t) => !t.secondary))
+const visibleIndex = computed({
+  get() {
+    const cur = tabs.value[tabIndex.value]
+    const i = visibleTabs.value.findIndex((t) => t.name === cur?.name)
+    return i < 0 ? 0 : i
+  },
+  set(vi) {
+    const name = visibleTabs.value[vi]?.name
+    const fi = tabs.value.findIndex((t) => t.name === name)
+    if (fi >= 0) tabIndex.value = fi
+  },
+})
 
 const sections = createResource({
   url: 'crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_sidepanel_sections',

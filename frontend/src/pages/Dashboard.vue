@@ -6,13 +6,13 @@
       </template>
       <template #right-header>
         <Button
-          v-if="!editing && !isVentas"
+          v-if="!editing && !isCustom"
           :label="__('Refresh')"
           :iconLeft="LucideRefreshCcw"
           @click="dashboardItems.reload"
         />
         <Button
-          v-if="!editing && isAdmin() && !isVentas"
+          v-if="!editing && isAdmin() && !isCustom"
           :label="__('Edit')"
           :iconLeft="LucidePenLine"
           @click="enableEditing"
@@ -41,7 +41,15 @@
       </template>
     </LayoutHeader>
 
-    <div class="p-5 pb-2 flex items-center gap-4">
+    <div v-if="!isAdminUser" class="flex flex-1 items-center justify-center p-10 text-center">
+      <div>
+        <LucideLock class="mx-auto h-8 w-8 text-ink-gray-4" />
+        <div class="mt-3 text-base font-medium text-ink-gray-7">{{ __('Acceso restringido') }}</div>
+        <div class="mt-1 text-sm text-ink-gray-5">{{ __('Los dashboards son solo para administradores.') }}</div>
+      </div>
+    </div>
+
+    <div v-if="isAdminUser" class="p-5 pb-2 flex items-center gap-4">
       <Dropdown v-if="dashboards.data?.length" :options="dashboardOptions">
         <Button
           variant="outline"
@@ -50,7 +58,7 @@
         />
       </Dropdown>
       <Dropdown
-        v-if="!showDatePicker && !isVentas"
+        v-if="!showDatePicker && !isCustom"
         v-model="preset"
         :options="options"
         class="form-control"
@@ -65,7 +73,7 @@
         }"
       />
       <DateRangePicker
-        v-else-if="!isVentas"
+        v-else-if="!isCustom"
         ref="datePickerRef"
         class="!w-48"
         :value="filters.period"
@@ -90,7 +98,7 @@
         </template>
       </DateRangePicker>
       <Link
-        v-if="(isAdmin() || isManager()) && !isVentas"
+        v-if="(isAdmin() || isManager()) && !isCustom"
         class="form-control w-48"
         variant="outline"
         :value="filters.user && getUser(filters.user).full_name"
@@ -116,13 +124,14 @@
         </template>
         <template #item-label="{ option }">
           <Tooltip :text="option.value">
-            <div class="cursor-pointer">
+            <div class="cursor-pointer text-ink-gray-9">
               {{ getUser(option.value).full_name }}
             </div>
           </Tooltip>
         </template>
       </Link>
       <Link
+        v-if="!isCustom"
         class="form-control w-48"
         variant="outline"
         :value="filters.territory"
@@ -133,8 +142,10 @@
       />
     </div>
 
-    <div class="w-full flex-1 overflow-y-scroll">
+    <div v-if="isAdminUser" class="w-full flex-1 overflow-y-scroll">
       <VentasPorMes v-if="isVentas" embedded />
+      <VentasAnalisis v-else-if="isVentasAnalisis" embedded />
+      <MarketingAnalisis v-else-if="isMarketing" embedded />
       <DashboardGrid
         v-else-if="!dashboardItems.loading && dashboardItems.data"
         v-model="dashboardItems.data"
@@ -155,8 +166,11 @@ import AddChartModal from '@/components/Dashboard/AddChartModal.vue'
 import LucideRefreshCcw from '~icons/lucide/refresh-ccw'
 import LucideUndo2 from '~icons/lucide/undo-2'
 import LucidePenLine from '~icons/lucide/pen-line'
+import LucideLock from '~icons/lucide/lock'
 import DashboardGrid from '@/components/Dashboard/DashboardGrid.vue'
 import VentasPorMes from '@/pages/VentasPorMes.vue'
+import VentasAnalisis from '@/pages/VentasAnalisis.vue'
+import MarketingAnalisis from '@/pages/MarketingAnalisis.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import ViewBreadcrumbs from '@/components/ViewBreadcrumbs.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
@@ -176,6 +190,7 @@ import {
 import { ref, reactive, computed, provide } from 'vue'
 
 const { users, getUser, isManager, isAdmin } = usersStore()
+const isAdminUser = computed(() => { try { return !!isAdmin() } catch (e) { return false } })
 
 const editing = ref(false)
 
@@ -183,9 +198,16 @@ const showDatePicker = ref(false)
 const datePickerRef = ref(null)
 const preset = ref('Last 30 Days')
 const showAddChartModal = ref(false)
-const selectedDashboard = ref('Manager Dashboard')
 const VENTAS_POR_MES = '__ventas_por_mes'
+const VENTAS_ANALISIS = '__ventas_analisis'
+const MARKETING = '__marketing'
+// Vista por defecto del Dashboard: Ventas por producto
+const selectedDashboard = ref(VENTAS_ANALISIS)
 const isVentas = computed(() => selectedDashboard.value === VENTAS_POR_MES)
+const isVentasAnalisis = computed(() => selectedDashboard.value === VENTAS_ANALISIS)
+const isMarketing = computed(() => selectedDashboard.value === MARKETING)
+// Cualquier dashboard "custom" (embebido) que no use los filtros de fecha/usuario estándar
+const isCustom = computed(() => isVentas.value || isVentasAnalisis.value || isMarketing.value)
 
 const filters = reactive({
   period: getLastXDays(),
@@ -280,6 +302,8 @@ const dashboards = createListResource({
   pageLength: 50,
   auto: true,
   onSuccess: (data: any[]) => {
+    // No pisar las vistas embebidas por defecto (Ventas por producto, etc.)
+    if (isCustom.value) return
     if (data?.length && !data.find((d) => d.name === selectedDashboard.value)) {
       selectedDashboard.value = data[0].name
       dashboardItems.reload()
@@ -289,6 +313,8 @@ const dashboards = createListResource({
 
 const selectedDashboardTitle = computed(() => {
   if (isVentas.value) return __('Ventas por Mes')
+  if (isVentasAnalisis.value) return __('Ventas por producto / país / mes / responsable')
+  if (isMarketing.value) return __('Marketing · Eventos por mes')
   const d = dashboards.data?.find((x: any) => x.name === selectedDashboard.value)
   return d?.title || selectedDashboard.value
 })
@@ -305,6 +331,18 @@ const dashboardOptions = computed(() => [
     label: __('Ventas por Mes'),
     onClick: () => {
       selectedDashboard.value = VENTAS_POR_MES
+    },
+  },
+  {
+    label: __('Ventas por producto / país / mes / responsable'),
+    onClick: () => {
+      selectedDashboard.value = VENTAS_ANALISIS
+    },
+  },
+  {
+    label: __('Marketing · Eventos por mes'),
+    onClick: () => {
+      selectedDashboard.value = MARKETING
     },
   },
 ])

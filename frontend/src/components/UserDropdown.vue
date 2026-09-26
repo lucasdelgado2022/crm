@@ -7,8 +7,8 @@
           isCollapsed
             ? 'w-auto px-0'
             : open
-              ? 'w-full px-2 bg-surface-base shadow-sm'
-              : 'w-full px-2 hover:bg-surface-gray-3'
+              ? 'w-full px-2 bg-surface-elevation-3 shadow-sm'
+              : 'w-full px-2 hover:bg-surface-gray-2'
         "
       >
         <BrandLogo v-model="brand" class="h-8 max-w-16 flex-shrink-0" />
@@ -182,9 +182,15 @@ function deskApp() {
   }
 }
 
+const APP_ORDER = ['crm', 'ventas', 'helpdesk', 'lms', 'erpnext']
+function appRank(name) {
+  const i = APP_ORDER.indexOf(name)
+  return i < 0 ? 99 : i
+}
 function crmSiblingApps(data) {
   return data
     .filter((app) => app.name !== 'crm')
+    .sort((a, b) => appRank(a.name) - appRank(b.name))
     .map((app) => ({
       name: app.name,
       logo: app.logo,

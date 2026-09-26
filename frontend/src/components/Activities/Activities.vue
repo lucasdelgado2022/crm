@@ -45,6 +45,15 @@
     <div v-else-if="title == 'Roadmap'" class="h-full">
       <RoadmapArea :doctype="doctype" :docname="docname" />
     </div>
+    <div v-else-if="title == 'ErpDocs'" class="h-full">
+      <VentaRelacion :deal-id="docname" embedded />
+    </div>
+    <div v-else-if="title == 'EstadoVenta'" class="h-full">
+      <EstadoVentaArea :doctype="doctype" :docname="docname" />
+    </div>
+    <div v-else-if="title == 'Requerimiento'" class="h-full">
+      <RequerimientoArea :doctype="doctype" :docname="docname" />
+    </div>
     <div v-else-if="title == 'Comisiones'" class="h-full">
       <ComisionesArea :doctype="doctype" :docname="docname" />
     </div>
@@ -72,7 +81,11 @@
           :key="note.name"
           @click="modalRef.showNote(note)"
         >
-          <NoteArea v-model="all_activities" :note="note" />
+          <NoteArea
+            v-model="all_activities"
+            :note="note"
+            :modalRef="modalRef"
+          />
         </div>
       </div>
       <div v-else-if="title == 'Comments'" class="pb-5">
@@ -473,6 +486,10 @@ import CommentArea from '@/components/Activities/CommentArea.vue'
 import InteractionArea from '@/components/Activities/InteractionArea.vue'
 import RiesgosArea from '@/components/Activities/RiesgosArea.vue'
 import RoadmapArea from '@/components/Activities/RoadmapArea.vue'
+import ErpDocsArea from '@/components/Activities/ErpDocsArea.vue'
+import EstadoVentaArea from '@/components/Activities/EstadoVentaArea.vue'
+import RequerimientoArea from '@/components/Activities/RequerimientoArea.vue'
+import VentaRelacion from '@/pages/VentaRelacion.vue'
 import ComisionesArea from '@/components/Activities/ComisionesArea.vue'
 import CallArea from '@/components/Activities/CallArea.vue'
 import NoteArea from '@/components/Activities/NoteArea.vue'
@@ -655,9 +672,13 @@ watch(
 
 onBeforeUnmount(() => {
   $socket.off('whatsapp_message')
+  $socket.off('docinfo_update', handleDocinfoUpdate)
+  $socket.emit('doc_unsubscribe', props.doctype, props.docname)
 })
 
 onMounted(() => {
+  $socket.emit('doc_subscribe', props.doctype, props.docname)
+  $socket.on('docinfo_update', handleDocinfoUpdate)
   $socket.on('whatsapp_message', (data) => {
     if (
       data.reference_doctype === props.doctype &&
@@ -675,6 +696,15 @@ onMounted(() => {
     }
   })
 })
+
+function handleDocinfoUpdate({ doc, key }) {
+  if (key !== 'comments') return
+  if (doc.reference_doctype !== props.doctype) return
+  if (doc.reference_name !== props.docname) return
+
+  all_activities.reload()
+  _document.reload()
+}
 
 function sendTemplate(template) {
   showWhatsappTemplates.value = false

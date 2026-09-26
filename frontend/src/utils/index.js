@@ -319,6 +319,14 @@ export function htmlToText(html) {
   return div.textContent || div.innerText || ''
 }
 
+export function isContentEmpty(html) {
+  if (!html) return true
+  // Media/embeds are content even without text, so they post fine.
+  if (/<(img|video|iframe|table|hr)\b/i.test(html)) return false
+  // .trim() also strips U+00A0 (nbsp), so whitespace-only content reads empty.
+  return htmlToText(html).trim() === ''
+}
+
 export function startCase(str) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
@@ -328,6 +336,19 @@ export function validateEmail(email) {
     /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
   return regExp.test(email)
 }
+
+export function validatePhone(phone) {
+  let value = String(phone).trim()
+  return /^\+?[\d\s()-]+$/.test(value) && /\d/.test(value)
+}
+
+export const isMac =
+  typeof navigator !== 'undefined' &&
+  /Mac|iPod|iPhone|iPad/i.test(
+    navigator.userAgentData?.platform || navigator.platform || '',
+  )
+
+export const submitShortcutLabel = isMac ? '⌘⏎' : 'Ctrl+⏎'
 
 export function parseAssignees(assignees) {
   let { getUser } = usersStore()
@@ -883,4 +904,33 @@ export function sanitizeHTML(html = '', options = {}) {
 export function sanitizeText(text = '') {
   if (typeof text !== 'string') return text
   return text.replace(/\p{Cf}/gu, '')
+}
+
+export function whatsappLink(phone) {
+  const digits = String(phone || '').replace(/\D/g, '')
+  return digits ? `https://wa.me/${digits}` : ''
+}
+
+export function openWhatsApp(phone) {
+  const url = whatsappLink(phone)
+  if (url) window.open(url, '_blank', 'noopener')
+}
+
+export function userInitials(name) {
+  const s = String(name || '').trim()
+  if (!s) return '?'
+  const first = s.split(/\s+/)[0]
+  if (first.length >= 2) return first[0].toUpperCase() + first[1].toLowerCase()
+  return first[0].toUpperCase()
+}
+
+const AVATAR_COLORS = [
+  '#2563eb', '#16a34a', '#7c3aed', '#f59e0b', '#e11d48', '#0891b2',
+  '#c026d3', '#65a30d', '#ea580c', '#0d9488', '#4f46e5', '#db2777',
+]
+export function userColor(key) {
+  const s = String(key || '')
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
 }

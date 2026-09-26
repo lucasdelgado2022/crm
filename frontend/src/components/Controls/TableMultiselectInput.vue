@@ -7,12 +7,19 @@
         v-for="value in parsedValues"
         ref="valuesRef"
         :key="value"
-        :label="value"
+        :label="displayLabel(value)"
         theme="gray"
         variant="subtle"
-        class="rounded bg-surface-base hover:!bg-surface-gray-1 focus-visible:ring-outline-gray-4"
+        class="rounded border border-outline-gray-2 bg-surface-base focus-visible:ring-outline-gray-4"
+        :style="pillStyle(value)"
         @keydown.delete.capture.stop="removeLastValue"
       >
+        <template
+          v-if="linkField && linkField.options === 'User'"
+          #prefix
+        >
+          <UserAvatar :user="value" size="xs" />
+        </template>
         <template #suffix>
           <span
             class="lucide-x h-3.5"
@@ -38,6 +45,20 @@
               @click.stop="togglePopover"
             />
           </template>
+          <template
+            v-if="linkField.options === 'User'"
+            #item-prefix="{ option }"
+          >
+            <UserAvatar class="mr-2" :user="option.value" size="sm" />
+          </template>
+          <template
+            v-if="linkField.options === 'User'"
+            #item-label="{ option }"
+          >
+            <div class="cursor-pointer text-ink-gray-9">
+              {{ getUser(option.value)?.full_name || option.value }}
+            </div>
+          </template>
         </Link>
       </div>
     </div>
@@ -47,6 +68,8 @@
 
 <script setup>
 import Link from '@/components/Controls/Link.vue'
+import { usersStore } from '@/stores/users'
+import UserAvatar from '@/components/UserAvatar.vue'
 import { createDocument } from '@/composables/document'
 import { getMeta } from '@/stores/meta'
 import { ref, computed, nextTick } from 'vue'
@@ -62,6 +85,40 @@ const props = defineProps({
 const emit = defineEmits(['change'])
 
 const { getFields } = getMeta(props.doctype)
+const { getUser } = usersStore()
+function displayLabel(value) {
+  if (linkField.value && linkField.value.options === 'User') {
+    return getUser(value)?.full_name || value
+  }
+  return value
+}
+
+// Paleta de capsulas de color (hex inline: independiente de Tailwind/JIT)
+const PILL_COLORS = [
+  { bg: '#dbeafe', fg: '#1e40af', bd: '#bfdbfe' }, // blue
+  { bg: '#dcfce7', fg: '#166534', bd: '#bbf7d0' }, // green
+  { bg: '#f3e8ff', fg: '#6b21a8', bd: '#e9d5ff' }, // purple
+  { bg: '#fef3c7', fg: '#92400e', bd: '#fde68a' }, // amber
+  { bg: '#fce7f3', fg: '#9d174d', bd: '#fbcfe8' }, // pink
+  { bg: '#ccfbf1', fg: '#115e59', bd: '#99f6e4' }, // teal
+  { bg: '#ffedd5', fg: '#9a3412', bd: '#fdba74' }, // orange
+  { bg: '#e0e7ff', fg: '#3730a3', bd: '#c7d2fe' }, // indigo
+]
+function pillStyle(value) {
+  // campos de usuario: mantener capsula base (con avatar), sin color
+  if (linkField.value && linkField.value.options === 'User') {
+    return {}
+  }
+  const str = String(value || '')
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
+  const c = PILL_COLORS[h % PILL_COLORS.length]
+  return {
+    backgroundColor: c.bg,
+    color: c.fg,
+    borderColor: c.bd,
+  }
+}
 
 const values = defineModel({ type: Array, default: () => [] })
 

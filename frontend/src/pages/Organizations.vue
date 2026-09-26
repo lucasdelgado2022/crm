@@ -107,15 +107,32 @@ async function loadLinkMeta() {
     // ignore — icons just won't show
   }
 }
+// name -> { contacts, activity } para las columnas Contactos / Actividad
+const activityMap = ref({})
+async function loadActivity() {
+  try {
+    const res = await call('organization_activity')
+    activityMap.value = res?.message || res || {}
+  } catch (e) {
+    activityMap.value = {}
+  }
+}
+
 watch(
   () => organizations.value?.data?.data,
-  () => loadLinkMeta(),
+  () => {
+    loadLinkMeta()
+    // Actividad se calcula global; cargar una sola vez.
+    if (!Object.keys(activityMap.value).length) loadActivity()
+  },
   { immediate: true },
 )
 const loadMore = ref(1)
 const triggerResize = ref(1)
 const updatedPageCount = ref(20)
 const viewControls = ref(null)
+
+// Filtro por defecto ("solo organizaciones con oportunidad") eliminado a pedido.
 
 const rows = computed(() => {
   if (
@@ -191,6 +208,27 @@ const rows = computed(() => {
     _rows.websiteUrl =
       linkMeta.value[organization.name]?.website || organization.website || ''
     _rows.linkedinUrl = linkMeta.value[organization.name]?.linkedin || ''
+    const act = activityMap.value[organization.name]
+    _rows.custom_contactos = act?.contacts ?? 0
+    const estado = act?.estado || 'sin_actividad'
+    _rows.custom_actividad =
+      estado === 'inactivo'
+        ? {
+            label: __('Inactivo'),
+            color: 'text-red-600',
+            textClass: 'text-red-600 font-medium',
+          }
+        : estado === 'con_actividad'
+          ? {
+              label: __('Con actividad'),
+              color: 'text-green-600',
+              textClass: 'text-green-700',
+            }
+          : {
+              label: __('Sin actividad'),
+              color: 'text-gray-400',
+              textClass: 'text-ink-gray-5',
+            }
     return _rows
   })
 })
@@ -198,8 +236,25 @@ const rows = computed(() => {
 const columns = computed(() => {
   let _columns = organizations.value?.data?.columns || []
 
-  // Set align right for last column
+  // Columnas propias: Actividad y Contactos
   if (_columns.length) {
+    _columns = [
+      ..._columns,
+      {
+        label: __('Actividad'),
+        key: 'custom_actividad',
+        type: 'Data',
+        width: '10rem',
+      },
+      {
+        label: __('Contactos'),
+        key: 'custom_contactos',
+        type: 'Int',
+        width: '8rem',
+        align: 'right',
+      },
+    ]
+    // Alinear a la derecha la última columna
     _columns = _columns.map((col, index) => {
       if (index === _columns.length - 1) {
         return { ...col, align: 'right' }

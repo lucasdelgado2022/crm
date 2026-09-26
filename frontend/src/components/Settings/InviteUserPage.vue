@@ -2,7 +2,7 @@
   <div class="flex h-full flex-col gap-6 py-8 px-6 text-ink-gray-8">
     <div class="flex px-2 justify-between">
       <div class="flex flex-col gap-1 w-9/12">
-        <h2 class="flex gap-2 text-2xl-semibold leading-none h-5">
+        <h2 class="flex gap-2 text-2xl-semibold leading-tight">
           {{ __('Send Invites To') }}
         </h2>
         <p class="text-p-base text-ink-gray-6">
@@ -57,7 +57,7 @@
       </div>
       <div class="border-t pt-6">
         <h3 class="text-base-semibold text-ink-gray-8">
-          {{ __('Crear usuario sin email') }}
+          {{ __('Crear usuario directo') }}
         </h3>
         <p class="text-p-sm text-ink-gray-6 mt-1">
           {{
@@ -66,6 +66,16 @@
             )
           }}
         </p>
+        <FormControl
+          v-model="localEmail"
+          type="email"
+          class="mt-4"
+          :label="__('Correo (opcional)')"
+          placeholder="usuario@empresa.com"
+          :description="
+            __('Si lo dejás vacío se asigna un correo temporal @solaer.local')
+          "
+        />
         <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FormControl
             v-model="localFirstName"
@@ -84,6 +94,12 @@
           class="mt-3"
           :label="__('Rol')"
           :options="roleOptions"
+        />
+        <FormControl
+          v-model="localEnabled"
+          type="checkbox"
+          class="mt-3"
+          :label="__('Habilitar acceso ahora')"
         />
         <Button
           class="mt-4"
@@ -161,6 +177,8 @@ const localFirstName = ref('')
 const localLastName = ref('')
 const localRole = ref('Sales User')
 const localCreatedMsg = ref('')
+const localEmail = ref('')
+const localEnabled = ref(true)
 const createLocal = createResource({
   url: 'crm.api.create_local_agent',
   makeParams() {
@@ -168,6 +186,8 @@ const createLocal = createResource({
       first_name: localFirstName.value,
       last_name: localLastName.value,
       role: localRole.value,
+      email: localEmail.value,
+      enabled: localEnabled.value ? 1 : 0,
     }
   },
   onSuccess(data) {
@@ -179,6 +199,8 @@ const createLocal = createResource({
     localFirstName.value = ''
     localLastName.value = ''
     localRole.value = 'Sales User'
+    localEmail.value = ''
+    localEnabled.value = true
   },
   onError(err) {
     toast.error(err?.messages?.[0] || __('No se pudo crear el usuario'))
@@ -193,7 +215,9 @@ const userExistMessage = computed(() => {
   const existingEmails = users.data.crmUsers.map((user) => user.name)
   const existingUsersSet = new Set(existingEmails)
 
-  const existingInvitees = inviteesSet.intersection(existingUsersSet)
+  const existingInvitees = new Set(
+    [...inviteesSet].filter((x) => existingUsersSet.has(x)),
+  )
   if (existingInvitees.size === 0) return null
 
   return __('User with email {0} already exists', [
@@ -209,7 +233,9 @@ const inviteeExistMessage = computed(() => {
   const existingEmails = pendingInvitations.data.map((user) => user.email)
   const existingUsersSet = new Set(existingEmails)
 
-  const existingInvitees = inviteesSet.intersection(existingUsersSet)
+  const existingInvitees = new Set(
+    [...inviteesSet].filter((x) => existingUsersSet.has(x)),
+  )
   if (existingInvitees.size === 0) return null
 
   return __('User with email {0} already invited', [

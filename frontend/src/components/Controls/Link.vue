@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-1.5 p-[2px] -m-[2px]">
+  <div class="space-y-1.5 p-[2px] !-m-[2px]">
     <label v-if="attrs.label" class="block" :class="labelClasses">
       {{ __(attrs.label) }}
     </label>
@@ -173,7 +173,7 @@ const options = createResource({
       return {
         label: option.label || option.value,
         value: option.value,
-        description: stripHtml(option.description),
+        description: cleanDesc(option.description, option.value),
       }
     })
     if (!props.hideMe && props.doctype == 'User') {
@@ -186,6 +186,15 @@ const options = createResource({
   },
 })
 
+function cleanDesc(html, value) {
+  const s = stripHtml(html)
+  if (!s) return ''
+  return s
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => p && p !== String(value))
+    .join(' · ')
+}
 function stripHtml(html) {
   if (!html) return ''
   return html

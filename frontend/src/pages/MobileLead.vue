@@ -51,6 +51,12 @@
         :actions="document.actions"
       />
       <Button
+        v-if="doc.mobile_no || doc.phone"
+        :tooltip="__('Escribir por WhatsApp')"
+        :icon="WhatsAppIcon"
+        @click="openWhatsApp(doc.mobile_no || doc.phone)"
+      />
+      <Button
         :label="__('Convert')"
         variant="solid"
         @click="showConvertToDealModal = true"
@@ -135,6 +141,7 @@ import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import WhatsAppIcon from '@/components/Icons/WhatsAppIcon.vue'
+import { openWhatsApp } from '@/utils'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import LostReasonModal from '@/components/Modals/LostReasonModal.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
@@ -255,7 +262,11 @@ const breadcrumbs = computed(() => {
 
   items.push({
     label: title.value,
-    route: { name: 'Lead', params: { leadId: props.leadId } },
+    route: {
+      name: 'Lead',
+      params: { leadId: props.leadId },
+      query: route.query,
+    },
   })
   return items
 })

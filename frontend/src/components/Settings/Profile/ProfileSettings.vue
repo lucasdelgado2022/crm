@@ -122,6 +122,21 @@
             @click="showChangePasswordModal = true"
           />
         </div>
+        <div class="flex items-center justify-between mt-6">
+          <div class="flex flex-col gap-1">
+            <span class="text-base-medium text-ink-gray-8">{{ __('Color de avatar') }}</span>
+            <span class="text-p-sm text-ink-gray-6">{{ __('Color de fondo de tu avatar cuando no tenés foto.') }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              type="color"
+              :value="avatarColor || '#171717'"
+              class="h-8 w-12 cursor-pointer rounded border border-outline-gray-2 bg-surface-base"
+              @change="(e) => saveAvatarColor(e.target.value)"
+            />
+            <Button v-if="avatarColor" variant="ghost" :label="__('Quitar')" @click="saveAvatarColor('')" />
+          </div>
+        </div>
       </div>
     </template>
   </SettingsLayoutBase>
@@ -137,6 +152,7 @@ import SettingsLayoutBase from '@/components/Layouts/SettingsLayoutBase.vue'
 import ChangePasswordModal from '@/components/Modals/ChangePasswordModal.vue'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { validateIsImageFile } from '@/utils'
+import { usersStore } from '@/stores/users'
 import {
   Avatar,
   TextInput,
@@ -152,6 +168,17 @@ const emit = defineEmits(['updateStep'])
 
 const { user: sessionUser } = inject('session')
 const user = createDocumentResource({ doctype: 'User', name: sessionUser })
+const { setUserColorLocal } = usersStore()
+const avatarColor = computed(() => user.doc?.custom_avatar_color || '')
+async function saveAvatarColor(color) {
+  try {
+    await user.setValue.submit({ custom_avatar_color: color || null })
+    setUserColorLocal(sessionUser, color)
+    toast.success(__('Color de avatar actualizado'))
+  } catch (e) {
+    toast.error(__('No se pudo actualizar el color'))
+  }
+}
 
 const showChangePasswordModal = ref(false)
 const isHoveringRemove = ref(false)
@@ -191,7 +218,7 @@ function save() {
   user.save.submit(null, {
     onSuccess: () => {
       editName.value = false
-      toast.success(__('Profile Updated Successfully'))
+      toast.success(__('Profile updated successfully'))
     },
     onError: (err) => {
       toast.error(err.message + ': ' + err.messages[0])

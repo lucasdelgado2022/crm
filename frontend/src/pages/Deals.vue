@@ -38,13 +38,13 @@
     }"
   />
   <div
-    v-if="orderedStatusCounts.length"
+    v-if="orderedStatusCounts.length || dealStatusTypes.data?.length"
     class="flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2 sm:px-5"
   >
     <button
       class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
       :class="
-        !activeStatus
+        !activeStatus && !activeGroup
           ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
           : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
       "
@@ -52,6 +52,28 @@
     >
       {{ __('Todos') }}
       <span class="font-bold text-ink-gray-9">{{ totalStatusCount }}</span>
+    </button>
+    <button
+      class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+      :class="
+        activeGroup === 'active'
+          ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+          : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+      "
+      @click="setGroupFilter('active')"
+    >
+      {{ __('Activas') }}
+    </button>
+    <button
+      class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm"
+      :class="
+        activeGroup === 'closed'
+          ? 'border-outline-gray-3 bg-surface-gray-2 text-ink-gray-9'
+          : 'border-outline-gray-2 text-ink-gray-6 hover:text-ink-gray-9'
+      "
+      @click="setGroupFilter('closed')"
+    >
+      {{ __('Cerradas') }}
     </button>
     <button
       v-for="s in orderedStatusCounts"
@@ -262,6 +284,7 @@
     :rows="rows"
     :columns="columns"
     :column-totals="columnTotals"
+    :column-averages="columnAverages"
     :status-filter-options="orderedStatusCounts"
     :active-status-filter="activeStatus"
     :options="{
@@ -275,6 +298,7 @@
     @columnWidthUpdated="() => triggerResize++"
     @updatePageCount="(count) => (updatedPageCount = count)"
     @applyFilter="(data) => viewControls.applyFilter(data)"
+    @contextFilter="(data) => viewControls.applyContextFilter(data)"
     @applyLikeFilter="(data) => viewControls.applyLikeFilter(data)"
     @likeDoc="(data) => viewControls.likeDoc(data)"
     @selectionsChanged="
@@ -314,6 +338,7 @@ import { useDoctypeModal } from '@/composables/doctypeModal'
 import { getMeta } from '@/stores/meta'
 import { globalStore } from '@/stores/global'
 import { usersStore } from '@/stores/users'
+import { setListNav } from '@/stores/listNav'
 import { organizationsStore } from '@/stores/organizations'
 import { statusesStore } from '@/stores/statuses'
 import { territoriesStore } from '@/stores/territories'
@@ -322,7 +347,7 @@ import { callEnabled } from '@/composables/telephony'
 import { formatDate, timeAgo, website, formatTime } from '@/utils'
 import { timestampCell } from '@/composables/useTimelinePreferences'
 import { useOnboarding, useTelemetry } from 'frappe-ui/frappe'
-import { Tooltip, Avatar, Dropdown, createResource, FeatherIcon, toast } from 'frappe-ui'
+import { Tooltip, Avatar, Dropdown, createResource, FeatherIcon, toast, call } from 'frappe-ui'
 import { useRoute } from 'vue-router'
 import { ref, reactive, computed, h, watch, onMounted } from 'vue'
 
@@ -369,6 +394,7 @@ function shareView() {
   }
 }
 let sharedApplied = false
+let defaultFilterApplied = false
 watch(
   viewControls,
   (vc) => {
@@ -384,14 +410,45 @@ watch(
   { immediate: true },
 )
 
-const statusCounts = createResource({
-  url: 'crm.api.doc.get_status_counts',
-  params: { doctype: 'CRM Deal' },
-  auto: true,
-})
+watch(
+  () => deals.value?.data?.data,
+  (data) => {
+    if (Array.isArray(data)) setListNav('CRM Deal', data.map((r) => r.name))
+  },
+  { immediate: true },
+)
+
+// Conteos por estado, DINÁMICOS según los filtros aplicados (excepto 'status').
+// Usamos frappe.client.get_count por estado (método core que parsea bien los
+// filtros; en v16 get_status_counts falla y los server scripts no pueden
+// parsear JSON). Los estados con conteo 0 no se incluyen -> cápsula oculta.
+const statusCountData = ref([])
+let statusCountsToken = 0
+async function reloadStatusCounts() {
+  const f = { ...(deals.value?.params?.filters || {}) }
+  delete f.status
+  const statuses = (dealStatusTypes.data || []).map((s) => s.name)
+  if (!statuses.length) return
+  const my = ++statusCountsToken
+  try {
+    const results = await Promise.all(
+      statuses.map(async (st) => {
+        const c = await call('frappe.client.get_count', {
+          doctype: 'CRM Deal',
+          filters: { ...f, status: st },
+        })
+        return { status: st, count: Number(c) || 0 }
+      }),
+    )
+    if (my !== statusCountsToken) return // llegó uno más nuevo
+    statusCountData.value = results.filter((r) => r.count > 0)
+  } catch (e) {
+    /* mantiene lo previo */
+  }
+}
 
 const orderedStatusCounts = computed(() =>
-  [...(statusCounts.data || [])]
+  [...(statusCountData.value || [])]
     .map((s) => ({ ...s, color: getDealStatus(s.status)?.color }))
     .sort(
       (a, b) =>
@@ -402,15 +459,91 @@ const orderedStatusCounts = computed(() =>
 
 const activeStatus = computed(() => deals.value?.params?.filters?.status || null)
 const totalStatusCount = computed(() =>
-  (statusCounts.data || []).reduce((a, s) => a + (s.count || 0), 0),
+  (statusCountData.value || []).reduce((a, s) => a + (s.count || 0), 0),
 )
 
+// Recalcular cuando cambian los filtros aplicados (sin contar 'status').
+watch(
+  () => {
+    const f = { ...(deals.value?.params?.filters || {}) }
+    delete f.status
+    return JSON.stringify(f)
+  },
+  () => reloadStatusCounts(),
+)
+
+const activeGroup = ref(null)
+const dealStatusTypes = createResource({
+  url: 'frappe.client.get_list',
+  params: { doctype: 'CRM Deal Status', fields: ['name', 'type'], limit_page_length: 0 },
+  auto: true,
+  onSuccess: () => {
+    applyDefaultFilter()
+    reloadStatusCounts()
+  },
+})
+const CLOSED_TYPES = ['Won', 'Lost']
+const activeStatusNames = computed(() =>
+  (dealStatusTypes.data || []).filter((s) => !CLOSED_TYPES.includes(s.type)).map((s) => s.name),
+)
+const closedStatusNames = computed(() =>
+  (dealStatusTypes.data || []).filter((s) => CLOSED_TYPES.includes(s.type)).map((s) => s.name),
+)
+const wonStatusNames = computed(() =>
+  (dealStatusTypes.data || []).filter((s) => s.type === 'Won').map((s) => s.name),
+)
+const lostStatusNames = computed(() =>
+  (dealStatusTypes.data || []).filter((s) => s.type === 'Lost').map((s) => s.name),
+)
+// Ticks WON / LOST / TODAS (todos desactivados por defecto = sin filtro de status)
+const fWon = ref(false)
+const fLost = ref(false)
+const fTodas = ref(false)
+function onTick(which) {
+  if (which === 'todas' && fTodas.value) {
+    fWon.value = false
+    fLost.value = false
+  } else if ((which === 'won' || which === 'lost') && (fWon.value || fLost.value)) {
+    fTodas.value = false
+  }
+  applyTickFilter()
+}
+function applyTickFilter() {
+  activeGroup.value = null
+  const f = { ...(deals.value?.params?.filters || {}) }
+  if (fTodas.value || (!fWon.value && !fLost.value)) {
+    delete f.status
+  } else {
+    let names = []
+    if (fWon.value) names = names.concat(wonStatusNames.value)
+    if (fLost.value) names = names.concat(lostStatusNames.value)
+    f.status = ['in', names]
+  }
+  viewControls.value?.updateFilter(f)
+}
+function setGroupFilter(kind) {
+  const f = { ...(deals.value?.params?.filters || {}) }
+  if (kind === 'active') f.status = ['in', activeStatusNames.value]
+  else if (kind === 'closed') f.status = ['in', closedStatusNames.value]
+  else delete f.status
+  viewControls.value?.updateFilter(f)
+  activeGroup.value = kind
+}
+
+// Filtro por defecto: mostrar oportunidades activas (ni Won ni Lost).
+function applyDefaultFilter() {
+  // Sin filtro por defecto: mostrar todas las oportunidades.
+}
+watch(viewControls, () => applyDefaultFilter(), { immediate: true })
 function setStatusFilter(status) {
+  activeGroup.value = null
   const f = { ...(deals.value?.params?.filters || {}) }
   if (status) f.status = status
   else delete f.status
   viewControls.value?.updateFilter(f)
 }
+
+// (filtro por año de cierre eliminado a pedido)
 
 function getRow(name, field) {
   function getValue(value) {
@@ -484,6 +617,29 @@ const columnTotals = computed(() => {
     }
   })
   return totals
+})
+
+// Promedio de las columnas de moneda visibles (sum / cantidad de filas cargadas).
+const columnAverages = computed(() => {
+  const data = deals.value?.data?.data
+  if (!Array.isArray(data) || !data.length) return {}
+  const currency = data[0]?.currency
+  const n = data.length
+  const avgs = {}
+  columns.value.forEach((col) => {
+    if (col.type === 'Currency') {
+      let sum = 0
+      data.forEach((d) => {
+        const v = Number(d[col.key])
+        if (!isNaN(v)) sum += v
+      })
+      avgs[col.key] = getFormattedCurrency(col.key, {
+        [col.key]: sum / n,
+        currency,
+      })
+    }
+  })
+  return avgs
 })
 
 function getGroupedByRows(listRows, groupByField, columns) {

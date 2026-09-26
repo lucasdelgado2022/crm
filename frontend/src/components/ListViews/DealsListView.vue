@@ -24,16 +24,18 @@
         v-for="column in columns"
         :key="column.key"
         :item="column"
-        @columnWidthUpdated="emit('columnWidthUpdated', column)"
+        @columnWidthUpdated="(e) => onColumnWidthUpdated(e, column)"
       >
         <Button
           v-if="column.key == '_liked_by'"
-          variant="ghosted"
+          variant="ghost"
           class="!h-4"
-          :class="isLikeFilterApplied ? 'fill-red-500' : 'fill-white'"
           @click="() => emit('applyLikeFilter')"
         >
-          <HeartIcon class="h-4 w-4" />
+          <HeartIcon
+            class="h-4 w-4"
+            :class="isLikeFilterApplied ? 'fill-red-500 text-red-500' : ''"
+          />
         </Button>
       </ListHeaderItem>
     </ListHeader>
@@ -46,29 +48,33 @@
         <template #prefix>
           <div
             v-if="column.key === '_assign'"
-            class="flex items-center -space-x-1.5 truncate"
+            class="flex items-center gap-1.5"
           >
             <Tooltip
               v-if="ownerMap[row.name] || row.deal_owner"
               :text="__('Responsable') + ': ' + userLabel(ownerMap[row.name] || row.deal_owner)"
             >
-              <div class="rounded-full ring-2 ring-blue-500">
-                <Avatar
-                  :image="userImage(ownerMap[row.name] || row.deal_owner)"
-                  :label="userLabel(ownerMap[row.name] || row.deal_owner)"
+              <div class="rounded-full">
+                <UserAvatar
+                  :user="ownerMap[row.name] || row.deal_owner"
                   size="sm"
                 />
               </div>
             </Tooltip>
-            <Tooltip
-              v-for="u in apoyoMap[row.name] || []"
-              :key="u"
-              :text="__('Apoyo') + ': ' + userLabel(u)"
+            <div
+              v-if="(apoyoMap[row.name] || []).length"
+              class="flex shrink-0 items-center -space-x-1.5"
             >
-              <div class="rounded-full ring-2 ring-sky-300">
-                <Avatar :image="userImage(u)" :label="userLabel(u)" size="sm" />
-              </div>
-            </Tooltip>
+              <Tooltip
+                v-for="u in apoyoMap[row.name] || []"
+                :key="u"
+                :text="__('Apoyo') + ': ' + userLabel(u)"
+              >
+                <div class="rounded-full">
+                  <UserAvatar :user="u" size="sm" />
+                </div>
+              </Tooltip>
+            </div>
           </div>
           <div v-else-if="column.key === 'status'">
             <IndicatorIcon :class="item.color" />
@@ -79,7 +85,7 @@
           <div v-else-if="column.key === 'custom_producto' && getProductColor(item)">
             <IndicatorIcon :class="getProductColor(item)" />
           </div>
-          <div v-else-if="column.key === 'organization'">
+          <div v-else-if="column.key === 'organization'" class="flex items-center gap-1.5">
             <Avatar
               v-if="item.label"
               class="flex items-center"
@@ -88,29 +94,16 @@
               size="sm"
             />
           </div>
-          <div v-else-if="column.key === 'deal_owner'">
-            <Avatar
-              v-if="item.full_name"
-              class="flex items-center"
-              :image="item.user_image"
-              :label="item.full_name"
-              size="sm"
-            />
+          <div
+            v-else-if="column.key === 'deal_owner'"
+            class="flex items-center gap-1.5"
+          >
+            <template v-if="row.deal_owner">
+              <UserAvatar :user="row.deal_owner" size="sm" />
+            </template>
           </div>
           <div v-else-if="column.key === 'mobile_no' && item">
             <PhoneIcon class="h-4 w-4" />
-          </div>
-          <div v-else-if="column.key === '_liked_by'">
-            <Button
-              v-if="column.key == '_liked_by'"
-              variant="ghosted"
-              :class="isLiked(item) ? 'fill-red-500' : 'fill-white'"
-              @click.stop.prevent="
-                () => emit('likeDoc', { name: row.name, liked: isLiked(item) })
-              "
-            >
-              <HeartIcon class="h-4 w-4" />
-            </Button>
           </div>
         </template>
         <template #default="{ label }">
@@ -195,6 +188,19 @@
               class="text-ink-gray-9"
             />
           </div>
+          <div v-else-if="column.key === '_liked_by'">
+            <Button
+              variant="ghost"
+              @click.stop.prevent="
+                () => emit('likeDoc', { name: row.name, liked: isLiked(item) })
+              "
+            >
+              <HeartIcon
+                class="h-4 w-4"
+                :class="isLiked(item) ? 'fill-red-500 text-red-500' : ''"
+              />
+            </Button>
+          </div>
           <RatingInput
             v-else-if="column.type === 'Rating'"
             :value="item"
@@ -212,9 +218,20 @@
                 })
             "
           />
+          <div v-else-if="column.key === 'status'" class="truncate text-base" @contextmenu="(e) => openCtx(e, column, item, row)">
+            <span
+              v-if="statusHl(item)"
+              class="rounded px-2 py-0.5 text-sm font-medium"
+              :style="statusHl(item)"
+            >
+              {{ typeof item === 'object' ? item.label || item.value : item }}
+            </span>
+            <span v-else>{{ typeof item === 'object' ? item.label || item.value : item }}</span>
+          </div>
           <div
             v-else-if="label"
             class="truncate text-base"
+            @contextmenu="(e) => openCtx(e, column, item, row)"
             @click="
               (event) =>
                 emit('applyFilter', {
@@ -232,6 +249,7 @@
         </template>
       </ListRowItem>
     </ListRows>
+    <ContextFilterMenu ref="ctxMenu" />
     <ListSelectBanner>
       <template #actions="{ selections, unselectAll }">
         <Dropdown
@@ -262,6 +280,26 @@
       <span v-else-if="i === 0" class="text-ink-gray-5">{{ __('Total') }}</span>
     </div>
   </div>
+  <div
+    v-if="hasAverages"
+    class="mx-3 grid items-center gap-4 px-2 pb-2.5 text-sm font-medium text-ink-gray-6 sm:mx-5"
+    :style="{ gridTemplateColumns: totalsGridTemplate }"
+  >
+    <div v-if="options?.selectable !== false" />
+    <div
+      v-for="(col, i) in columns"
+      :key="col.key"
+      class="truncate"
+      :class="
+        ['right', 'end'].includes(col.align)
+          ? 'justify-self-end'
+          : 'justify-self-start'
+      "
+    >
+      <span v-if="columnAverages[col.key]">{{ columnAverages[col.key] }}</span>
+      <span v-else-if="i === 0" class="text-ink-gray-5">{{ __('Promedio') }}</span>
+    </div>
+  </div>
   <ListFooter
     v-if="pageLengthCount"
     v-model="pageLengthCount"
@@ -278,6 +316,7 @@
 <script setup>
 import HeartIcon from '@/components/Icons/HeartIcon.vue'
 import MultipleAvatar from '@/components/MultipleAvatar.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import StatusHeaderFilter from '@/components/ListViews/StatusHeaderFilter.vue'
 import { productsStore } from '@/stores/products'
@@ -285,8 +324,16 @@ import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
 import ListRows from '@/components/ListViews/ListRows.vue'
+import ContextFilterMenu from '@/components/ContextFilterMenu.vue'
 import InlineEditCell from '@/components/ListViews/InlineEditCell.vue'
 import { isTranslatable, formatDuration } from '@/utils'
+
+function statusHl(item) {
+  const s = String((typeof item === 'object' ? item.label || item.value : item) || '').toLowerCase()
+  if (['won', 'ganado', 'ganada'].includes(s)) return 'background-color:#dcfce7;color:#166534'
+  if (['lost', 'perdido', 'perdida'].includes(s)) return 'background-color:#fee2e2;color:#991b1b'
+  return null
+}
 import {
   Avatar,
   ListView,
@@ -326,6 +373,7 @@ const props = defineProps({
   rows: { type: Array, required: true },
   columns: { type: Array, required: true },
   columnTotals: { type: Object, default: () => ({}) },
+  columnAverages: { type: Object, default: () => ({}) },
   statusFilterOptions: { type: Array, default: () => [] },
   activeStatusFilter: { type: String, default: null },
   options: {
@@ -344,6 +392,7 @@ const props = defineProps({
 const apoyoMap = ref({})
 const ownerMap = ref({})
 const ageMap = ref({})
+const tipoMap = ref({})
 
 function daysSince(dt) {
   if (!dt) return null
@@ -357,6 +406,12 @@ function ageLabel(name) {
   if (d == null) return ''
   return d === 1 ? '1 día' : `${d} días`
 }
+function tipoBadge(name) {
+  const t = tipoMap.value[name] || ''
+  if (/^renovaci/i.test(t)) return 'RN'
+  if (/^nuevo/i.test(t)) return 'NEW'
+  return ''
+}
 
 async function loadTeam() {
   const names = (props.rows || []).map((r) => r.name).filter(Boolean)
@@ -364,6 +419,7 @@ async function loadTeam() {
     apoyoMap.value = {}
     ownerMap.value = {}
     ageMap.value = {}
+    tipoMap.value = {}
     return
   }
   try {
@@ -382,7 +438,7 @@ async function loadTeam() {
       call('frappe.client.get_list', {
         doctype: 'CRM Deal',
         filters: { name: ['in', names] },
-        fields: ['name', 'deal_owner', 'creation'],
+        fields: ['name', 'deal_owner', 'creation', 'custom_tipo_oportunidad'],
         limit_page_length: 0,
       }),
     ])
@@ -391,12 +447,15 @@ async function loadTeam() {
     apoyoMap.value = am
     const om = {}
     const gm = {}
+    const tm = {}
     for (const r of deals || []) {
       om[r.name] = r.deal_owner
       gm[r.name] = daysSince(r.creation)
+      tm[r.name] = r.custom_tipo_oportunidad
     }
     ownerMap.value = om
     ageMap.value = gm
+    tipoMap.value = tm
   } catch (e) {
     // silencioso: si falla, el cell queda vacío
   }
@@ -410,6 +469,9 @@ watch(
 const hasTotals = computed(
   () => Object.keys(props.columnTotals || {}).length > 0,
 )
+const hasAverages = computed(
+  () => Object.keys(props.columnAverages || {}).length > 0,
+)
 const totalsGridTemplate = computed(() => {
   const checkbox = props.options?.selectable !== false ? '14px ' : ''
   const cols = props.columns
@@ -422,6 +484,7 @@ const totalsGridTemplate = computed(() => {
 })
 
 const emit = defineEmits([
+  'contextFilter',
   'loadMore',
   'updatePageCount',
   'columnWidthUpdated',
@@ -439,6 +502,10 @@ const list = defineModel('list', { type: Object })
 
 function reloadList() {
   list.value?.reload?.()
+}
+function onColumnWidthUpdated({ width, save }, column) {
+  column.width = width
+  if (save) emit('columnWidthUpdated', column)
 }
 
 function getLabel(label, column) {
@@ -472,4 +539,36 @@ defineExpose({
     () => listBulkActionsRef.value?.customListActions,
   ),
 })
+
+const ctxMenu = ref(null)
+const CTX_FIELDS = ['organization', 'custom_producto', 'status']
+function ctxDisplay(column, item, row) {
+  if (item && typeof item === 'object') return item.label || item.value || row?.[column.key]
+  return item != null && item !== '' ? item : row?.[column.key]
+}
+function openCtx(e, column, item, row) {
+  if (!column || !CTX_FIELDS.includes(column.key)) return
+  const raw = item && typeof item === 'object' ? (item.value ?? item.name ?? item.label) : item
+  const value = raw != null && raw !== '' ? raw : row?.[column.key]
+  e.preventDefault()
+  e.stopPropagation()
+  const disp = ctxDisplay(column, item, row)
+  const options = []
+  if (value !== undefined && value !== null && value !== '') {
+    options.push({
+      label: __('Filtrar por') + ' \u00ab' + disp + '\u00bb',
+      onClick: () => emit('contextFilter', { fieldname: column.key, value, operator: 'eq' }),
+    })
+    options.push({
+      label: __('Excluir') + ' \u00ab' + disp + '\u00bb',
+      onClick: () => emit('contextFilter', { fieldname: column.key, value, operator: 'ne' }),
+    })
+  }
+  options.push({
+    label: __('Quitar filtro de este campo'),
+    onClick: () => emit('contextFilter', { fieldname: column.key, value: null, operator: 'clear' }),
+  })
+  ctxMenu.value?.open({ x: e.clientX, y: e.clientY, options })
+}
+
 </script>
